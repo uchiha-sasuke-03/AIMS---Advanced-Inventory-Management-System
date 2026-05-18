@@ -39,7 +39,7 @@ export default function AssetList() {
   const { isAdmin } = useAuth();
   const toast = useToast();
 
-  const locations = ['Bengaluru', 'Pune', 'Hyderabad', 'Noida', 'Chennai', 'Mumbai'];
+  const locations = ['IT Department', 'Server Room', 'Storage Room', 'Main Office', 'Sales Room', 'Reception'];
 
   useEffect(() => {
     fetchCategories();

@@ -7,7 +7,7 @@ export default function AIChatPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'assistant', text: 'Hello! I\'m your AI Data Agent. Ask me anything about your inventory in plain English.\n\nExamples:\n• "Show all laptops in stock in Bengaluru"\n• "How many assets are allocated?"\n• "List employees in Engineering department"', timestamp: new Date() }
+    { role: 'assistant', text: 'Hello! I\'m your AI Data Agent. Ask me anything about your inventory in plain English.\n\nExamples:\n• "Show all laptops in stock in Server Room"\n• "How many assets are allocated?"\n• "List employees in Engineering department"', timestamp: new Date() }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
