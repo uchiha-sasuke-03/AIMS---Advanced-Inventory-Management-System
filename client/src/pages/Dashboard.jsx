@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { 
-  Package, Monitor, Smartphone, Mouse, AlertTriangle, TrendingUp, MapPin, 
-  ArrowRightLeft, CheckSquare, CornerDownLeft, DollarSign, AlertOctagon 
+import {
+  Package, Monitor, Smartphone, Mouse, AlertTriangle, TrendingUp, MapPin,
+  ArrowRightLeft, CheckSquare, CornerDownLeft, DollarSign, AlertOctagon,
+  RefreshCw, ShieldCheck, Activity, Layers, Cpu, Server, HardDrive, Clock
 } from 'lucide-react';
 import api from '../utils/api';
 import { formatINR, formatDate, formatStatus, getStatusBadge } from '../utils/formatters';
@@ -11,6 +12,8 @@ const categoryIcons = {
   'Monitors': Monitor,
   'Phones': Smartphone,
   'Accessories': Mouse,
+  'Servers': Server,
+  'Storage': HardDrive
 };
 
 function getRelativeTimeString(date) {
@@ -34,12 +37,12 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchDashboard();
-    
+
     // Auto-polling interval every 5 seconds for absolute real-time dashboard sync
     const interval = setInterval(() => {
       fetchDashboardSilent();
     }, 5000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -87,22 +90,31 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="animate-fade-in">
-        <div className="page-header"><h1 className="page-title">Dashboard</h1></div>
-        <div className="grid-4">
-          {[1,2,3,4].map(i => <div key={i} className="skeleton" style={{ height: 140, borderRadius: 12 }} />)}
+      <div className="dashboard-root animate-fade-in">
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Dashboard</h1>
+            <p className="page-subtitle">Loading corporate inventory telemetry...</p>
+          </div>
+        </div>
+        <div className="grid-4 mb-4">
+          {[1, 2, 3, 4].map(i => <div key={i} className="skeleton" style={{ height: 120, borderRadius: 16 }} />)}
+        </div>
+        <div className="grid-2">
+          <div className="skeleton" style={{ height: 350, borderRadius: 16 }} />
+          <div className="skeleton" style={{ height: 350, borderRadius: 16 }} />
         </div>
       </div>
     );
   }
 
-  if (!data) return <div className="empty-state"><h3>Failed to load dashboard</h3></div>;
+  if (!data) return <div className="empty-state"><h3>Failed to load dashboard data</h3><p className="text-secondary">Please check your backend connection.</p></div>;
 
   const { summary, overall, lowStockWarnings, recentAllocations, locationBreakdown, liveActivity } = data;
- 
+
   const totalCategoryAssets = summary ? summary.reduce((sum, c) => sum + c.total_assets, 0) : 0;
-  const colors = ['#38BDF8', '#10B981', '#F59E0B', '#A855F7'];
-  
+  const colors = ['#0284C7', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#6366F1'];
+
   let tempAccumulator = 0;
   const donutSegments = summary ? summary.map((cat, idx) => {
     const percentage = totalCategoryAssets > 0 ? (cat.total_assets / totalCategoryAssets) : 0;
@@ -120,7 +132,7 @@ export default function Dashboard() {
   // Math for Stock by Location Pie/Donut Chart
   const totalLocationAssets = locationBreakdown ? locationBreakdown.reduce((sum, l) => sum + l.count, 0) : 0;
   const locationColors = ['#0EA5E9', '#10B981', '#F59E0B', '#A855F7', '#EC4899', '#6366F1'];
-  
+
   let locAccumulator = 0;
   const locationSegments = locationBreakdown ? locationBreakdown.map((loc, idx) => {
     const percentage = totalLocationAssets > 0 ? (loc.count / totalLocationAssets) : 0;
@@ -145,7 +157,7 @@ export default function Dashboard() {
     'declined': '#EF4444',
     'rejected': '#EF4444'
   };
-  
+
   let reqAccumulator = 0;
   const requestSegments = requestsBreakdown.map((req) => {
     const percentage = totalRequests > 0 ? (req.count / totalRequests) : 0;
@@ -157,7 +169,7 @@ export default function Dashboard() {
       percentage: Math.round(percentage * 100),
       strokeLength,
       strokeOffset,
-      color: requestColors[req.status.toLowerCase()] || '#A855F7'
+      color: requestColors[req.status.toLowerCase()] || '#8B5CF6'
     };
   });
 
@@ -167,10 +179,10 @@ export default function Dashboard() {
   const returnColors = {
     'good': '#10B981',
     'damaged': '#EF4444',
-    'needs_repair': '#3b82f6',
-    'repair': '#3b82f6'
+    'needs_repair': '#3B82F6',
+    'repair': '#3B82F6'
   };
-  
+
   let retAccumulator = 0;
   const returnSegments = returnsBreakdown.map((ret) => {
     const percentage = totalReturns > 0 ? (ret.count / totalReturns) : 0;
@@ -191,7 +203,7 @@ export default function Dashboard() {
   const totalSaasCost = saasBreakdown.reduce((sum, s) => sum + parseFloat(s.total_cost || 0), 0);
   const totalSaasLicenses = saasBreakdown.reduce((sum, s) => sum + s.count, 0);
   const saasColors = ['#0EA5E9', '#A855F7', '#EC4899', '#10B981'];
-  
+
   let saasAccumulator = 0;
   const saasSegments = saasBreakdown.map((s, idx) => {
     const percentage = totalSaasCost > 0 ? (parseFloat(s.total_cost) / totalSaasCost) : 0;
@@ -212,189 +224,207 @@ export default function Dashboard() {
   const totalDamages = damageSeverityBreakdown.reduce((sum, d) => sum + d.count, 0);
 
   return (
-    <div className="animate-fade-in" style={{ padding: '0 0.5rem' }}>
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+    <div className="dashboard-root animate-fade-in">
+      {/* Top Header Section */}
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', borderBottom: 'none', marginBottom: '1.5rem' }}>
         <div>
-          <h1 className="page-title">Dashboard</h1>
-          <p className="page-subtitle">Unified corporate asset health & audit compliance overview</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <h1 className="page-title" style={{ color: '#0f172a', fontWeight: 800, letterSpacing: '-0.03em', fontSize: '1.85rem' }}>Dashboard</h1>
+            <span className="badge" style={{ background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', padding: '0.2rem 0.6rem', fontSize: '0.75rem', fontWeight: 600 }}>Enterprise Command Center</span>
+          </div>
+          <p className="page-subtitle" style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '0.25rem' }}>Unified corporate asset health, real-time audit compliance & infrastructure overview</p>
         </div>
-        
-        {/* Real-time Indicator Badge */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.625rem',
-          padding: '0.5rem 0.85rem',
-          background: 'var(--bg-secondary)',
-          border: '1px solid var(--border-primary)',
-          borderRadius: '30px',
-          boxShadow: 'var(--shadow-sm)',
-          transition: 'all 0.3s ease',
-          transform: pulse ? 'scale(1.03)' : 'scale(1)',
-          borderColor: pulse ? 'var(--status-success)' : 'var(--border-primary)'
-        }}>
-          <span style={{
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            background: 'var(--status-success)',
-            boxShadow: '0 0 10px #10B981',
-            display: 'inline-block',
-            animation: 'pulse 1.5s infinite'
-          }} />
-          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-            Real-Time Sync Active
-          </span>
-          <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', borderLeft: '1px solid var(--border-primary)', paddingLeft: '0.5rem' }}>
-            Last sync: {lastSynced}
-          </span>
-        </div>
-      </div>
 
-      {/* Overall Stats Cards */}
-      <div className="grid-4 mb-3">
-        <div className="card stat-card" style={{ background: 'var(--bg-glass)', border: '1px solid var(--border-primary)' }}>
-          <div className="stat-icon" style={{ background: 'rgba(59, 130, 246, 0.12)', color: 'var(--accent-primary)' }}>
-            <Package size={22} />
+        {/* Real-time Polling Status Pill */}
+        <div 
+          className="sync-status-pill"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '0.55rem 1rem',
+            background: '#ffffff',
+            border: '1px solid',
+            borderColor: pulse ? '#10b981' : '#e2e8f0',
+            borderRadius: '50px',
+            boxShadow: '0 4px 12px -2px rgba(15, 23, 42, 0.05)',
+            transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+            transform: pulse ? 'scale(1.02)' : 'scale(1)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span className="sync-dot" />
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0f172a', letterSpacing: '0.02em' }}>
+              Real-Time Sync Active
+            </span>
           </div>
-          <div className="stat-info">
-            <span className="stat-value">{overall?.total_assets || 0}</span>
-            <span className="stat-label">Total Assets</span>
-          </div>
-        </div>
-        <div className="card stat-card" style={{ background: 'var(--bg-glass)', border: '1px solid var(--border-primary)' }}>
-          <div className="stat-icon" style={{ background: 'rgba(16, 185, 129, 0.12)', color: 'var(--status-success)' }}>
-            <TrendingUp size={22} />
-          </div>
-          <div className="stat-info">
-            <span className="stat-value">{overall?.in_stock || 0}</span>
-            <span className="stat-label">In Stock</span>
-          </div>
-        </div>
-        <div className="card stat-card" style={{ background: 'var(--bg-glass)', border: '1px solid var(--border-primary)' }}>
-          <div className="stat-icon" style={{ background: 'rgba(59, 130, 246, 0.12)', color: 'var(--status-info)' }}>
-            <ArrowRightLeft size={22} />
-          </div>
-          <div className="stat-info">
-            <span className="stat-value">{overall?.allocated || 0}</span>
-            <span className="stat-label">Allocated</span>
-          </div>
-        </div>
-        <div className="card stat-card" style={{ background: 'var(--bg-glass)', border: '1px solid var(--border-primary)' }}>
-          <div className="stat-icon" style={{ background: 'rgba(239, 68, 68, 0.12)', color: 'var(--status-danger)' }}>
-            <AlertTriangle size={22} />
-          </div>
-          <div className="stat-info">
-            <span className="stat-value">{overall?.damaged || 0}</span>
-            <span className="stat-label">Damaged</span>
+          <div style={{ height: '14px', width: '1px', background: '#e2e8f0' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#64748b', fontSize: '0.725rem', fontWeight: 500 }}>
+            <Clock size={13} />
+            <span>Last sync: {lastSynced}</span>
           </div>
         </div>
       </div>
 
-<div className="grid-2 mb-3" style={{ gridTemplateColumns: '1.2fr 1fr', gap: '1.25rem' }}>
-        {/* 2. Stock by Category Pie/Donut Chart */}
-        <div className="card" style={{ background: 'var(--bg-glass)', border: '1px solid var(--border-primary)' }}>
-          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 700 }}>Stock by Category</h3>
-            <span className="text-sm text-secondary">Value: {formatINR(overall?.total_value)}</span>
+      {/* KPI Summary Cards Grid */}
+      <div className="grid-4 mb-4">
+        {/* Card 1: Total Assets */}
+        <div className="kpi-card" style={{ '--kpi-accent': '#0284c7' }}>
+          <div className="kpi-icon-box" style={{ background: '#e0f2fe', color: '#0284c7' }}>
+            <Package size={26} />
           </div>
- 
-          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', padding: '1rem 0', borderBottom: '1px solid var(--border-primary)', marginBottom: '1.5rem', alignItems: 'center' }}>
-            {/* SVG Donut */}
-            <div style={{ position: 'relative', width: '140px', height: '140px', flexShrink: 0, margin: '0 auto' }}>
-              <svg width="140" height="140" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
-                <circle cx="50" cy="50" r="40" fill="transparent" stroke="var(--bg-secondary)" strokeWidth="9" />
-                {donutSegments.map((cat) => (
-                  <circle
-                    key={cat.category_id}
-                    className="donut-segment"
-                    cx="50"
-                    cy="50"
-                    r="40"
-                    fill="transparent"
-                    stroke={cat.color}
-                    strokeWidth="9"
-                    strokeDasharray="251.2"
-                    strokeDashoffset={cat.strokeOffset}
-                    strokeLinecap="round"
-                    style={{
-                      transition: 'stroke-dashoffset 1s ease',
-                    }}
-                  />
-                ))}
-              </svg>
-              {/* Absolute center details */}
-              <div style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                textAlign: 'center',
-              }}>
-                <span className="text-secondary" style={{ fontSize: '0.55rem', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>TOTAL</span>
-                <span style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{totalCategoryAssets}</span>
+          <div className="kpi-info">
+            <span className="kpi-value">{overall?.total_assets || 0}</span>
+            <span className="kpi-label">Total Assets</span>
+          </div>
+        </div>
+
+        {/* Card 2: In Stock */}
+        <div className="kpi-card" style={{ '--kpi-accent': '#10b981' }}>
+          <div className="kpi-icon-box" style={{ background: '#d1fae5', color: '#10b981' }}>
+            <TrendingUp size={26} />
+          </div>
+          <div className="kpi-info">
+            <span className="kpi-value">{overall?.in_stock || 0}</span>
+            <span className="kpi-label">In Stock Active</span>
+          </div>
+        </div>
+
+        {/* Card 3: Allocated */}
+        <div className="kpi-card" style={{ '--kpi-accent': '#f59e0b' }}>
+          <div className="kpi-icon-box" style={{ background: '#fef3c7', color: '#f59e0b' }}>
+            <ArrowRightLeft size={26} />
+          </div>
+          <div className="kpi-info">
+            <span className="kpi-value">{overall?.allocated || 0}</span>
+            <span className="kpi-label">Assigned / In Use</span>
+          </div>
+        </div>
+
+        {/* Card 4: Damaged */}
+        <div className="kpi-card" style={{ '--kpi-accent': '#ef4444' }}>
+          <div className="kpi-icon-box" style={{ background: '#fee2e2', color: '#ef4444' }}>
+            <AlertTriangle size={26} />
+          </div>
+          <div className="kpi-info">
+            <span className="kpi-value">{overall?.damaged || 0}</span>
+            <span className="kpi-label">Damaged / Repair</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Bento Grid */}
+      <div className="bento-grid">
+        {/* Left Column: Stock by Category & Category Audits */}
+        <div className="premium-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <div className="card-header" style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
+              <h3 className="section-title">
+                <Layers size={18} style={{ color: '#0284c7' }} />
+                Stock Distribution by Category
+              </h3>
+              <span className="badge" style={{ background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', padding: '0.3rem 0.75rem', fontSize: '0.8rem', fontWeight: 700 }}>
+                Total Value: {formatINR(overall?.total_value)}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-around', padding: '1rem 0', marginBottom: '1.5rem' }}>
+              {/* SVG Donut */}
+              <div style={{ position: 'relative', width: '160px', height: '160px', flexShrink: 0 }}>
+                <svg width="160" height="160" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
+                  <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f1f5f9" strokeWidth="10" />
+                  {donutSegments.map((cat) => (
+                    <circle
+                      key={cat.category_id}
+                      className="donut-segment"
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="transparent"
+                      stroke={cat.color}
+                      strokeWidth="10"
+                      strokeDasharray="251.2"
+                      strokeDashoffset={cat.strokeOffset}
+                      strokeLinecap="round"
+                      style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.16, 1, 0.3, 1)' }}
+                    />
+                  ))}
+                </svg>
+                {/* Center Label */}
+                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b', display: 'block', letterSpacing: '0.06em' }}>TOTAL UNITS</span>
+                  <span style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>{totalCategoryAssets}</span>
+                </div>
+              </div>
+
+              {/* Legend List */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1, minWidth: '200px' }}>
+                {donutSegments.map((cat) => {
+                  const percentage = totalCategoryAssets > 0 ? Math.round((cat.total_assets / totalCategoryAssets) * 100) : 0;
+                  const IconCmp = categoryIcons[cat.category_name] || Package;
+                  return (
+                    <div key={cat.category_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.75rem', background: '#f8fafc', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: `${cat.color}15`, color: cat.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <IconCmp size={14} />
+                        </div>
+                        <span style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.85rem' }}>{cat.category_name}</span>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.85rem', marginRight: '0.5rem' }}>{cat.total_assets}</span>
+                        <span className="badge" style={{ background: '#ffffff', color: '#64748b', border: '1px solid #e2e8f0', fontSize: '0.7rem' }}>{percentage}%</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
- 
-            {/* Legend */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', justifyContent: 'center', minWidth: '170px' }}>
-              {donutSegments.map((cat) => {
-                const percentage = totalCategoryAssets > 0 ? Math.round((cat.total_assets / totalCategoryAssets) * 100) : 0;
-                return (
-                  <div key={cat.category_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: cat.color, display: 'inline-block' }} />
-                      <span style={{ fontWeight: 600 }}>{cat.category_name}</span>
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                      <strong>{cat.total_assets}</strong> <small>({percentage}%)</small>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           </div>
- 
-          {/* Status Gauge Comparison (Concentric Rings instead of bars) */}
-          <div>
-            <h4 style={{ fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Category Status Ring Audits</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '0.75rem' }}>
+
+          {/* Category Status Ring Audits (Mini Gauges) */}
+          <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '1.25rem' }}>
+            <h4 style={{ fontSize: '0.75rem', fontWeight: 700, marginBottom: '1rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <ShieldCheck size={14} style={{ color: '#10b981' }} />
+              Category Health & Allocation Gauges
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem' }}>
               {donutSegments.map((cat) => {
                 const total = cat.in_stock + cat.allocated + cat.damaged || 1;
                 const activePercentage = Math.round((cat.in_stock / total) * 100);
-                
+
                 return (
-                  <div key={cat.category_id} style={{ background: 'var(--bg-tertiary)', padding: '0.75rem', borderRadius: '10px', border: '1px solid var(--border-primary)', textAlign: 'center' }}>
-                    <h5 style={{ margin: '0 0 0.5rem 0', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', justifyContent: 'center', fontWeight: 700 }}>
-                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: cat.color }} />
+                  <div key={cat.category_id} className="status-ring-box">
+                    <h5 style={{ margin: '0 0 0.5rem 0', fontSize: '0.8rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: cat.color }} />
                       {cat.category_name}
                     </h5>
-                    
-                    {/* Tiny gauge */}
-                    <div style={{ position: 'relative', width: '50px', height: '50px', margin: '0.5rem auto' }}>
+
+                    {/* Mini Gauge */}
+                    <div style={{ position: 'relative', width: '56px', height: '56px', margin: '0.75rem auto' }}>
                       <svg width="100%" height="100%" viewBox="0 0 36 36">
-                        <circle cx="18" cy="18" r="16" fill="none" stroke="var(--bg-primary)" strokeWidth="3" />
-                        <circle 
-                          cx="18" 
-                          cy="18" 
-                          r="16" 
-                          fill="none" 
-                          stroke="var(--status-success)" 
-                          strokeWidth="3.5" 
-                          strokeDasharray="100" 
+                        <circle cx="18" cy="18" r="16" fill="none" stroke="#e2e8f0" strokeWidth="3" />
+                        <circle
+                          cx="18"
+                          cy="18"
+                          r="16"
+                          fill="none"
+                          stroke="#10b981"
+                          strokeWidth="3.5"
+                          strokeDasharray="100"
                           strokeDashoffset={100 - activePercentage}
                           strokeLinecap="round"
+                          style={{ transition: 'stroke-dashoffset 1s ease' }}
                         />
                       </svg>
-                      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '0.65rem', fontWeight: 800 }}>
+                      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '0.75rem', fontWeight: 800, color: '#0f172a' }}>
                         {activePercentage}%
                       </div>
                     </div>
-                    
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', fontSize: '0.6rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
-                      <span style={{ color: 'var(--status-success)' }}>S: <strong>{cat.in_stock}</strong></span>
-                      <span style={{ color: 'var(--status-info)' }}>A: <strong>{cat.allocated}</strong></span>
-                      <span style={{ color: 'var(--status-danger)' }}>D: <strong>{cat.damaged}</strong></span>
+
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', fontSize: '0.65rem', fontWeight: 600, marginTop: '0.5rem' }}>
+                      <span style={{ color: '#10b981', background: '#d1fae5', padding: '0.1rem 0.35rem', borderRadius: '4px' }}>S: {cat.in_stock}</span>
+                      <span style={{ color: '#2563eb', background: '#dbeafe', padding: '0.1rem 0.35rem', borderRadius: '4px' }}>A: {cat.allocated}</span>
+                      <span style={{ color: '#ef4444', background: '#fee2e2', padding: '0.1rem 0.35rem', borderRadius: '4px' }}>D: {cat.damaged}</span>
                     </div>
                   </div>
                 );
@@ -402,206 +432,182 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
- 
-        {/* Right Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {/* Low stock alerts circular rings */}
+
+        {/* Right Column: Depletion Risk & Location Breakdown */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Low Stock Alert Box */}
           {lowStockWarnings.length > 0 && (
-            <div className="card" style={{ borderColor: 'rgba(245, 158, 11, 0.3)', background: 'var(--bg-glass)' }}>
-              <div className="card-header">
-                <h3 style={{ color: 'var(--status-warning)', fontSize: '0.9rem', fontWeight: 700 }}>
-                  <AlertTriangle size={16} style={{ display: 'inline', marginRight: 6, verticalAlign: -2 }} />
-                  Stock Depletion Risk Gauge
+            <div className="premium-card" style={{ borderTop: '4px solid #f59e0b', background: '#fffbeb', borderColor: '#fde68a' }}>
+              <div className="card-header" style={{ borderBottom: '1px solid #fef3c7', paddingBottom: '0.75rem', marginBottom: '1rem' }}>
+                <h3 className="section-title" style={{ color: '#b45309' }}>
+                  <AlertTriangle size={18} style={{ color: '#f59e0b' }} />
+                  Stock Depletion Risk Alerts
                 </h3>
+                <span className="badge" style={{ background: '#f59e0b', color: '#ffffff', fontSize: '0.7rem', fontWeight: 700 }}>
+                  {lowStockWarnings.length} Critical
+                </span>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1rem 1.25rem' }}>
-                <div style={{ position: 'relative', width: '90px', height: '90px' }}>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '0.5rem 0' }}>
+                <div style={{ position: 'relative', width: '80px', height: '80px', flexShrink: 0 }}>
                   <svg width="100%" height="100%" viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)' }}>
-                    <path
+                    <circle cx="18" cy="18" r="16" fill="none" stroke="#fef3c7" strokeWidth="3.5" />
+                    <circle
+                      cx="18"
+                      cy="18"
+                      r="16"
                       fill="none"
-                      stroke="var(--bg-tertiary)"
+                      stroke="#f59e0b"
                       strokeWidth="3.5"
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    />
-                    <path
-                      fill="none"
-                      stroke="var(--status-warning)"
-                      strokeWidth="3.5"
-                      strokeDasharray="100, 100"
-                      strokeDashoffset={100 - Math.min((lowStockWarnings.length * 20), 85)}
+                      strokeDasharray="100"
+                      strokeDashoffset={100 - Math.min((lowStockWarnings.length * 25), 90)}
                       strokeLinecap="round"
-                      style={{
-                        transition: 'stroke-dashoffset 1s ease'
-                      }}
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      style={{ transition: 'stroke-dashoffset 1s ease' }}
                     />
                   </svg>
-                  <div style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    textAlign: 'center'
-                  }}>
-                    <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--status-warning)', display: 'block', lineHeight: 1 }}>
-                      {lowStockWarnings.length}
-                    </span>
-                    <span style={{ fontSize: '0.5rem', display: 'block', color: 'var(--text-tertiary)', fontWeight: 600, marginTop: '2px' }}>ALERTS</span>
+                  <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+                    <span style={{ fontSize: '1.35rem', fontWeight: 800, color: '#b45309', lineHeight: 1 }}>{lowStockWarnings.length}</span>
+                    <span style={{ fontSize: '0.5rem', fontWeight: 700, color: '#d97706', display: 'block', marginTop: '2px' }}>ITEMS</span>
                   </div>
                 </div>
-                <div style={{ width: '100%', marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {lowStockWarnings.map(w => (
-                    <div key={w.category_id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', padding: '0.35rem 0.625rem', background: 'var(--bg-secondary)', borderRadius: '6px', border: '1px solid var(--border-primary)' }}>
-                      <span style={{ fontWeight: 600 }}>{w.category_name}</span>
-                      <span style={{ color: 'var(--status-warning)', fontWeight: 700 }}>{w.in_stock} Units Left</span>
+                    <div key={w.category_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', padding: '0.5rem 0.85rem', background: '#ffffff', borderRadius: '8px', border: '1px solid #fde68a', boxShadow: '0 1px 3px rgba(245,158,11,0.1)' }}>
+                      <span style={{ fontWeight: 600, color: '#994500' }}>{w.category_name}</span>
+                      <span className="badge" style={{ background: '#fef3c7', color: '#b45309', fontWeight: 700, border: '1px solid #fde68a' }}>{w.in_stock} Units Left</span>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
           )}
- 
-          {/* 3. Animated Pie/Donut Chart for Stock by Location */}
-          <div className="card" style={{ background: 'var(--bg-glass)', border: '1px solid var(--border-primary)' }}>
-            <div className="card-header">
-              <h3 style={{ fontSize: '0.9rem', fontWeight: 700 }}><MapPin size={16} style={{ display: 'inline', marginRight: 6, verticalAlign: -2 }} /> Stock by Location</h3>
+
+          {/* Stock by Location Card */}
+          <div className="premium-card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div className="card-header" style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
+              <h3 className="section-title">
+                <MapPin size={18} style={{ color: '#10b981' }} />
+                Inventory Distribution by Location
+              </h3>
             </div>
-            <div style={{ padding: '0.5rem 0' }}>
-              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center' }}>
-                
-                {/* SVG Donut */}
-                <div style={{ position: 'relative', width: '120px', height: '120px', flexShrink: 0 }}>
-                  <svg width="100%" height="100%" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
-                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="var(--bg-secondary)" strokeWidth="9" />
-                    {locationSegments.map((loc, idx) => (
-                      <circle
-                        key={idx}
-                        className="donut-segment"
-                        cx="50"
-                        cy="50"
-                        r="40"
-                        fill="transparent"
-                        stroke={loc.color}
-                        strokeWidth="9"
-                        strokeDasharray="251.2"
-                        strokeDashoffset={loc.strokeOffset}
-                        strokeLinecap="round"
-                        style={{
-                          transition: 'stroke-dashoffset 1s ease',
-                        }}
-                      />
-                    ))}
-                  </svg>
-                  <div style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    textAlign: 'center',
-                  }}>
-                    <span className="text-secondary" style={{ fontSize: '0.5rem', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>LOCS</span>
-                    <span style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{totalLocationAssets}</span>
-                  </div>
-                </div>
 
-                {/* List Legend */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', flex: 1, minWidth: '140px' }}>
+            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-around', flex: 1 }}>
+              {/* SVG Donut */}
+              <div style={{ position: 'relative', width: '140px', height: '140px', flexShrink: 0 }}>
+                <svg width="140" height="140" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
+                  <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f1f5f9" strokeWidth="10" />
                   {locationSegments.map((loc, idx) => (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.725rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: loc.color }} />
-                        <span style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '90px' }}>{loc.location}</span>
-                      </div>
-                      <span style={{ color: 'var(--text-secondary)' }}><strong>{loc.count}</strong> <small style={{ fontSize: '0.6rem' }}>({loc.percentage}%)</small></span>
-                    </div>
+                    <circle
+                      key={idx}
+                      className="donut-segment"
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="transparent"
+                      stroke={loc.color}
+                      strokeWidth="10"
+                      strokeDasharray="251.2"
+                      strokeDashoffset={loc.strokeOffset}
+                      strokeLinecap="round"
+                      style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.16, 1, 0.3, 1)' }}
+                    />
                   ))}
+                </svg>
+                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+                  <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#64748b', display: 'block', letterSpacing: '0.06em' }}>TOTAL</span>
+                  <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>{totalLocationAssets}</span>
                 </div>
+              </div>
 
+              {/* Legend List */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1, minWidth: '180px' }}>
+                {locationSegments.map((loc, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.4rem 0.75rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: loc.color }} />
+                      <span style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '110px' }}>{loc.location}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.8rem' }}>{loc.count}</span>
+                      <span style={{ fontSize: '0.7rem', color: '#64748b', background: '#ffffff', padding: '0.1rem 0.35rem', borderRadius: '4px', border: '1px solid #e2e8f0' }}>{loc.percentage}%</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Live Audited Operations Telemetry Card */}
-      <div className="card mb-3 animate-fade-in" style={{ background: 'var(--bg-glass)', border: '1px solid var(--border-primary)', padding: '1.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-primary)', paddingBottom: '0.75rem' }}>
+      {/* Live Audited Operations Telemetry Feed Card */}
+      <div className="premium-card mb-4" style={{ padding: '1.75rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
           <div>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Live Audited Operations Telemetry</h3>
+            <h3 className="section-title">
+              <Activity size={18} style={{ color: '#8b5cf6' }} />
+              Live Audited Operations Telemetry
+            </h3>
             <p className="text-xs text-secondary" style={{ marginTop: '0.25rem' }}>Real-time streaming ledger of database transactions, physical QR scanner logs, and device triages.</p>
           </div>
-          <span className="badge badge-purple" style={{ background: 'rgba(168, 85, 247, 0.1)', color: '#A855F7', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#A855F7', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
+          <span className="badge" style={{ background: '#f5f3ff', color: '#6d28d9', border: '1px solid #ede9fe', padding: '0.35rem 0.85rem', fontSize: '0.8rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#8b5cf6', animation: 'pulseSync 1.5s infinite' }} />
             Active Real-time Feed
           </span>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '320px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '340px', overflowY: 'auto', paddingRight: '0.5rem' }}>
           {(!liveActivity || liveActivity.length === 0) ? (
-            <div className="text-center py-4 text-secondary text-sm">
+            <div className="text-center py-5 text-secondary text-sm" style={{ background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
               No recent activity log recorded in this database cycle.
             </div>
           ) : (
             liveActivity.map((activity, idx) => {
               const dateObj = new Date(activity.event_time);
               const relativeTime = getRelativeTimeString(dateObj);
-              
+
               // Custom colors based on activity types
               const typeConfig = {
-                'allocation': { color: 'var(--accent-primary)', label: 'ALLOCATION', icon: ArrowRightLeft },
-                'return': { color: 'var(--status-success)', label: 'RETURN', icon: CornerDownLeft },
-                'damage': { color: 'var(--status-danger)', label: 'DAMAGE REPORT', icon: AlertOctagon },
-                'scan': { color: '#A855F7', label: 'QR SCAN', icon: MapPin }
+                'allocation': { color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe', label: 'ALLOCATION', icon: ArrowRightLeft },
+                'return': { color: '#10b981', bg: '#ecfdf5', border: '#bbf7d0', label: 'RETURN', icon: CornerDownLeft },
+                'damage': { color: '#ef4444', bg: '#fef2f2', border: '#fecaca', label: 'DAMAGE REPORT', icon: AlertOctagon },
+                'scan': { color: '#8b5cf6', bg: '#f5f3ff', border: '#ede9fe', label: 'QR SCAN', icon: MapPin }
               };
-              const config = typeConfig[activity.type] || { color: 'var(--text-secondary)', label: 'EVENT', icon: CheckSquare };
+              const config = typeConfig[activity.type] || { color: '#475569', bg: '#f1f5f9', border: '#e2e8f0', label: 'EVENT', icon: CheckSquare };
               const IconComponent = config.icon;
-              
+
               return (
-                <div 
-                  key={idx} 
-                  className="activity-row"
-                  style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'space-between',
-                    background: 'var(--bg-tertiary)',
-                    border: '1px solid var(--border-primary)',
-                    padding: '0.75rem 1rem',
-                    borderRadius: '8px',
-                    gap: '1rem',
-                    animation: 'slideIn 0.3s ease forwards',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{ 
-                      width: '32px', 
-                      height: '32px', 
-                      borderRadius: '8px', 
-                      background: `rgba(${activity.type === 'allocation' ? '59, 130, 246' : activity.type === 'return' ? '16, 185, 129' : activity.type === 'damage' ? '239, 68, 68' : '168, 85, 247'}, 0.12)`, 
+                <div key={idx} className="activity-row">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '10px',
+                      background: config.bg,
                       color: config.color,
+                      border: `1px solid ${config.border}`,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0
                     }}>
-                      <IconComponent size={15} />
+                      <IconComponent size={18} />
                     </div>
                     <div>
-                      <span className="badge" style={{ fontSize: '0.6rem', fontWeight: 700, background: 'var(--bg-secondary)', color: config.color, border: `1px solid ${config.color}33`, padding: '0.15rem 0.4rem', borderRadius: '4px', verticalAlign: 'middle', marginRight: '0.5rem' }}>
+                      <span className="badge" style={{ fontSize: '0.65rem', fontWeight: 700, background: config.bg, color: config.color, border: `1px solid ${config.border}`, padding: '0.2rem 0.5rem', borderRadius: '6px', marginRight: '0.75rem' }}>
                         {config.label}
                       </span>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#0f172a' }}>
                         {activity.detail}
                       </span>
                     </div>
                   </div>
-                  
+
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <span style={{ fontSize: '0.725rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                    <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600, display: 'block' }}>
                       {relativeTime}
                     </span>
-                    <small style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', display: 'block', marginTop: '1px' }}>
+                    <small style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 500 }}>
                       {dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </small>
                   </div>
@@ -612,24 +618,29 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* 5. Unified Platform Operations Control Room */}
-      <div className="card mb-3 animate-fade-in" style={{ background: 'var(--bg-glass)', border: '1px solid var(--border-primary)', padding: '1.5rem' }}>
-        <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.25rem', color: 'var(--text-primary)' }}>Unified Platform Operations Control Room</h3>
-        <p className="text-xs text-secondary mb-4">Real-time status summaries of requests, returns, physical damage triage, and active SaaS/Cloud spending cycles.</p>
-        
-        <div className="grid-3" style={{ gap: '1.25rem' }}>
+      {/* Unified Platform Operations Control Room */}
+      <div className="premium-card mb-4" style={{ padding: '1.75rem' }}>
+        <div style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
+          <h3 className="section-title" style={{ fontSize: '1.2rem' }}>
+            <Cpu size={20} style={{ color: '#0284c7' }} />
+            Unified Platform Operations Control Room
+          </h3>
+          <p className="text-xs text-secondary" style={{ marginTop: '0.25rem' }}>Real-time status summaries of asset requests, returns condition audits, active SaaS/Cloud spending cycles, and physical damage triage.</p>
+        </div>
+
+        <div className="grid-3" style={{ gap: '1.5rem' }}>
           {/* Card A: Asset Request Tickets */}
-          <div className="card" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-primary)', padding: '1.25rem' }}>
-            <h4 style={{ fontSize: '0.85rem', fontWeight: 700, margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <CheckSquare size={16} style={{ color: 'var(--accent-primary)' }} />
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1.5rem' }}>
+            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#0f172a' }}>
+              <CheckSquare size={18} style={{ color: '#8b5cf6' }} />
               Request Status Distributions
             </h4>
-            
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+
+            <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
               {/* SVG Donut */}
-              <div style={{ position: 'relative', width: '100px', height: '100px', flexShrink: 0 }}>
+              <div style={{ position: 'relative', width: '120px', height: '120px', flexShrink: 0 }}>
                 <svg width="100%" height="100%" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
-                  <circle cx="50" cy="50" r="40" fill="transparent" stroke="var(--bg-secondary)" strokeWidth="10" />
+                  <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f1f5f9" strokeWidth="10" />
                   {requestSegments.map((req, idx) => (
                     <circle
                       key={idx}
@@ -643,27 +654,27 @@ export default function Dashboard() {
                       strokeDasharray="251.2"
                       strokeDashoffset={req.strokeOffset}
                       strokeLinecap="round"
-                      style={{ transition: 'stroke-dashoffset 1s ease' }}
+                      style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.16, 1, 0.3, 1)' }}
                     />
                   ))}
                 </svg>
                 <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-                  <span style={{ fontSize: '1.1rem', fontWeight: 800 }}>{totalRequests}</span>
-                  <span style={{ fontSize: '0.45rem', display: 'block', color: 'var(--text-tertiary)' }}>REQ TIX</span>
+                  <span style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>{totalRequests}</span>
+                  <span style={{ fontSize: '0.5rem', display: 'block', color: '#64748b', fontWeight: 700, marginTop: '2px' }}>TICKETS</span>
                 </div>
               </div>
-              
+
               {/* Legend List */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: '100px' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: '110px' }}>
                 {requestSegments.length === 0 ? (
                   <div className="text-xs text-secondary">No tickets submitted.</div>
                 ) : requestSegments.map((req, idx) => (
-                  <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.725rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem', background: '#ffffff', padding: '0.35rem 0.75rem', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                       <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: req.color }} />
-                      <span style={{ fontWeight: 500, textTransform: 'capitalize' }}>{req.status}</span>
+                      <span style={{ fontWeight: 600, textTransform: 'capitalize', color: '#0f172a' }}>{req.status}</span>
                     </div>
-                    <span style={{ color: 'var(--text-secondary)' }}><strong>{req.count}</strong> <small style={{ fontSize: '0.6rem' }}>({req.percentage}%)</small></span>
+                    <span style={{ color: '#475569', fontWeight: 700 }}>{req.count} <small style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 500 }}>({req.percentage}%)</small></span>
                   </div>
                 ))}
               </div>
@@ -671,17 +682,17 @@ export default function Dashboard() {
           </div>
 
           {/* Card B: Return Condition Audits */}
-          <div className="card" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-primary)', padding: '1.25rem' }}>
-            <h4 style={{ fontSize: '0.85rem', fontWeight: 700, margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <CornerDownLeft size={16} style={{ color: 'var(--status-success)' }} />
-              Asset Return Audits
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1.5rem' }}>
+            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#0f172a' }}>
+              <CornerDownLeft size={18} style={{ color: '#10b981' }} />
+              Asset Return Condition Audits
             </h4>
-            
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+
+            <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
               {/* SVG Donut */}
-              <div style={{ position: 'relative', width: '100px', height: '100px', flexShrink: 0 }}>
+              <div style={{ position: 'relative', width: '120px', height: '120px', flexShrink: 0 }}>
                 <svg width="100%" height="100%" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
-                  <circle cx="50" cy="50" r="40" fill="transparent" stroke="var(--bg-secondary)" strokeWidth="10" />
+                  <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f1f5f9" strokeWidth="10" />
                   {returnSegments.map((ret, idx) => (
                     <circle
                       key={idx}
@@ -695,27 +706,27 @@ export default function Dashboard() {
                       strokeDasharray="251.2"
                       strokeDashoffset={ret.strokeOffset}
                       strokeLinecap="round"
-                      style={{ transition: 'stroke-dashoffset 1s ease' }}
+                      style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.16, 1, 0.3, 1)' }}
                     />
                   ))}
                 </svg>
                 <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-                  <span style={{ fontSize: '1.1rem', fontWeight: 800 }}>{totalReturns}</span>
-                  <span style={{ fontSize: '0.45rem', display: 'block', color: 'var(--text-tertiary)' }}>RETURNS</span>
+                  <span style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>{totalReturns}</span>
+                  <span style={{ fontSize: '0.5rem', display: 'block', color: '#64748b', fontWeight: 700, marginTop: '2px' }}>RETURNS</span>
                 </div>
               </div>
-              
+
               {/* Legend List */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: '100px' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: '110px' }}>
                 {returnSegments.length === 0 ? (
                   <div className="text-xs text-secondary">No returns registered.</div>
                 ) : returnSegments.map((ret, idx) => (
-                  <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.725rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem', background: '#ffffff', padding: '0.35rem 0.75rem', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                       <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: ret.color }} />
-                      <span style={{ fontWeight: 500, textTransform: 'capitalize' }}>{ret.condition_on_return.replace('_', ' ')}</span>
+                      <span style={{ fontWeight: 600, textTransform: 'capitalize', color: '#0f172a' }}>{ret.condition_on_return.replace('_', ' ')}</span>
                     </div>
-                    <span style={{ color: 'var(--text-secondary)' }}><strong>{ret.count}</strong> <small style={{ fontSize: '0.6rem' }}>({ret.percentage}%)</small></span>
+                    <span style={{ color: '#475569', fontWeight: 700 }}>{ret.count} <small style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 500 }}>({ret.percentage}%)</small></span>
                   </div>
                 ))}
               </div>
@@ -723,17 +734,17 @@ export default function Dashboard() {
           </div>
 
           {/* Card C: SaaS / Cloud Infrastructure Budget Allocation */}
-          <div className="card" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-primary)', padding: '1.25rem' }}>
-            <h4 style={{ fontSize: '0.85rem', fontWeight: 700, margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <DollarSign size={16} style={{ color: '#EAB308' }} />
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1.5rem' }}>
+            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#0f172a' }}>
+              <DollarSign size={18} style={{ color: '#f59e0b' }} />
               Finance: SaaS & Cloud Spending
             </h4>
-            
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+
+            <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
               {/* SVG Donut */}
-              <div style={{ position: 'relative', width: '100px', height: '100px', flexShrink: 0 }}>
+              <div style={{ position: 'relative', width: '120px', height: '120px', flexShrink: 0 }}>
                 <svg width="100%" height="100%" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
-                  <circle cx="50" cy="50" r="40" fill="transparent" stroke="var(--bg-secondary)" strokeWidth="10" />
+                  <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f1f5f9" strokeWidth="10" />
                   {saasSegments.map((s, idx) => (
                     <circle
                       key={idx}
@@ -747,29 +758,29 @@ export default function Dashboard() {
                       strokeDasharray="251.2"
                       strokeDashoffset={s.strokeOffset}
                       strokeLinecap="round"
-                      style={{ transition: 'stroke-dashoffset 1s ease' }}
+                      style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.16, 1, 0.3, 1)' }}
                     />
                   ))}
                 </svg>
                 <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)', display: 'block', lineHeight: 1 }}>{totalSaasLicenses}</span>
-                  <span style={{ fontSize: '0.45rem', display: 'block', color: 'var(--text-tertiary)', marginTop: '2px' }}>LICENSES</span>
+                  <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', display: 'block', lineHeight: 1 }}>{totalSaasLicenses}</span>
+                  <span style={{ fontSize: '0.5rem', display: 'block', color: '#64748b', fontWeight: 700, marginTop: '2px' }}>LICENSES</span>
                 </div>
               </div>
-              
+
               {/* Legend List */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: '100px' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: '110px' }}>
                 {saasSegments.length === 0 ? (
                   <div className="text-xs text-secondary">No software registered.</div>
                 ) : saasSegments.map((s, idx) => (
-                  <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.725rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem', background: '#ffffff', padding: '0.35rem 0.75rem', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                       <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: s.color }} />
-                      <span style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '75px' }}>{s.category}</span>
+                      <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '75px', color: '#0f172a' }}>{s.category}</span>
                     </div>
                     <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.7rem' }}>₹{Math.round(s.total_cost).toLocaleString('en-IN')}</span>
-                      <small style={{ fontSize: '0.55rem', color: 'var(--text-tertiary)' }}>{s.percentage}% cost</small>
+                      <span style={{ color: '#0f172a', fontWeight: 700, fontSize: '0.75rem' }}>₹{Math.round(s.total_cost).toLocaleString('en-IN')}</span>
+                      <small style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 500 }}>{s.percentage}%</small>
                     </div>
                   </div>
                 ))}
@@ -779,42 +790,47 @@ export default function Dashboard() {
         </div>
 
         {/* Damage Incident Triage Row (Concentric Gauges) */}
-        <div style={{ marginTop: '1.25rem', borderTop: '1px solid var(--border-primary)', paddingTop: '1.25rem' }}>
-          <h4 style={{ fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            <AlertOctagon size={14} style={{ color: 'var(--status-danger)' }} />
-            Active Physical Damage Severity Gauges
+        <div style={{ marginTop: '1.5rem', borderTop: '1px solid #f1f5f9', paddingTop: '1.5rem' }}>
+          <h4 style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <AlertOctagon size={16} style={{ color: '#ef4444' }} />
+            Active Physical Damage Incident Triage Gauges
           </h4>
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
             {['critical', 'moderate', 'minor'].map((sev, idx) => {
               const countObj = damageSeverityBreakdown.find(d => d.severity.toLowerCase() === sev) || { count: 0 };
-              const color = sev === 'critical' ? '#EF4444' : sev === 'moderate' ? '#F59E0B' : '#3b82f6';
+              const color = sev === 'critical' ? '#ef4444' : sev === 'moderate' ? '#f59e0b' : '#3b82f6';
+              const bgLight = sev === 'critical' ? '#fef2f2' : sev === 'moderate' ? '#fffbeb' : '#eff6ff';
+              const borderLight = sev === 'critical' ? '#fecaca' : sev === 'moderate' ? '#fde68a' : '#bfdbfe';
               const maxScale = totalDamages > 0 ? (countObj.count / totalDamages) * 100 : 0;
-              
+
               return (
-                <div key={idx} style={{ flex: 1, minWidth: '150px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-primary)', padding: '0.75rem 1.25rem', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div style={{ position: 'relative', width: '45px', height: '45px', flexShrink: 0 }}>
+                <div key={idx} style={{ flex: 1, minWidth: '180px', background: '#f8fafc', border: '1px solid #e2e8f0', padding: '1rem 1.5rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '1.25rem', transition: 'all 0.2s ease' }} className="triage-box">
+                  <div style={{ position: 'relative', width: '56px', height: '56px', flexShrink: 0 }}>
                     <svg width="100%" height="100%" viewBox="0 0 36 36">
-                      <circle cx="18" cy="18" r="16" fill="none" stroke="var(--bg-secondary)" strokeWidth="3" />
-                      <circle 
-                        cx="18" 
-                        cy="18" 
-                        r="16" 
-                        fill="none" 
-                        stroke={color} 
-                        strokeWidth="3.5" 
-                        strokeDasharray="100" 
+                      <circle cx="18" cy="18" r="16" fill="none" stroke="#e2e8f0" strokeWidth="3" />
+                      <circle
+                        cx="18"
+                        cy="18"
+                        r="16"
+                        fill="none"
+                        stroke={color}
+                        strokeWidth="3.5"
+                        strokeDasharray="100"
                         strokeDashoffset={100 - (maxScale || 0)}
                         strokeLinecap="round"
-                        style={{ transition: 'stroke-dashoffset 1s ease' }}
+                        style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.16, 1, 0.3, 1)' }}
                       />
                     </svg>
-                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '0.85rem', fontWeight: 800, color }}>
+                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '1rem', fontWeight: 800, color }}>
                       {countObj.count}
                     </div>
                   </div>
                   <div>
-                    <h5 style={{ margin: 0, textTransform: 'capitalize', fontSize: '0.8rem', fontWeight: 700 }}>{sev} Reports</h5>
-                    <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <h5 style={{ margin: 0, textTransform: 'capitalize', fontSize: '0.9rem', fontWeight: 700, color: '#0f172a' }}>{sev}</h5>
+                      <span className="badge" style={{ background: bgLight, color, border: `1px solid ${borderLight}`, fontSize: '0.65rem', padding: '0.15rem 0.4rem' }}>Reports</span>
+                    </div>
+                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: '#64748b', fontWeight: 500 }}>
                       {totalDamages > 0 ? Math.round(maxScale) : 0}% of all incident tickets
                     </p>
                   </div>
@@ -826,70 +842,190 @@ export default function Dashboard() {
       </div>
 
       <style>{`
-        @keyframes drawPath {
-          from {
-            stroke-dashoffset: 800;
-          }
-          to {
-            stroke-dashoffset: 0;
-          }
+        /* Custom Premium Dashboard Styles */
+        .dashboard-root {
+          padding: 0.5rem 0 2rem 0;
+          max-width: 1600px;
+          margin: 0 auto;
         }
-        .stat-card {
+
+        .premium-card {
+          background: #ffffff;
+          border: 1px solid rgba(226, 232, 240, 0.8);
+          border-radius: 16px;
+          padding: 1.5rem;
+          box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.05);
+          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .premium-card:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 12px 30px -6px rgba(15, 23, 42, 0.08);
+          border-color: rgba(37, 99, 235, 0.3);
+        }
+
+        .kpi-card {
+          background: #ffffff;
+          border: 1px solid rgba(226, 232, 240, 0.8);
+          border-radius: 16px;
+          padding: 1.5rem;
+          box-shadow: 0 4px 15px -3px rgba(15, 23, 42, 0.03);
           display: flex;
           align-items: center;
-          gap: 1rem;
-          padding: 1.25rem;
+          gap: 1.25rem;
+          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          position: relative;
+          overflow: hidden;
         }
-        .stat-icon {
-          width: 48px;
-          height: 48px;
-          border-radius: 12px;
+
+        .kpi-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 4px;
+          height: 100%;
+          background: var(--kpi-accent, #2563eb);
+          border-top-left-radius: 16px;
+          border-bottom-left-radius: 16px;
+          transition: width 0.2s ease;
+        }
+
+        .kpi-card:hover::before {
+          width: 8px;
+        }
+
+        .kpi-card:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 12px 25px -5px rgba(15, 23, 42, 0.08);
+          border-color: rgba(226, 232, 240, 1);
+        }
+
+        .kpi-icon-box {
+          width: 56px;
+          height: 56px;
+          border-radius: 14px;
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .stat-info {
+
+        .kpi-card:hover .kpi-icon-box {
+          transform: scale(1.1) rotate(5deg);
+        }
+
+        .kpi-info {
           display: flex;
           flex-direction: column;
+          justify-content: center;
         }
-        .stat-value {
-          font-size: 1.5rem;
-          font-weight: 700;
-          color: var(--text-primary);
-          line-height: 1;
+
+        .kpi-value {
+          font-size: 1.85rem;
+          font-weight: 800;
+          color: #0f172a;
+          line-height: 1.1;
+          letter-spacing: -0.02em;
         }
-        .stat-label {
+
+        .kpi-label {
           font-size: 0.75rem;
-          color: var(--text-secondary);
+          font-weight: 600;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
           margin-top: 0.25rem;
         }
-        @keyframes pulse {
-          0% {
-            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-            transform: scale(0.95);
-          }
-          70% {
-            box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
-            transform: scale(1.05);
-          }
-          100% {
-            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
-            transform: scale(0.95);
+
+        .section-title {
+          font-size: 1.1rem;
+          font-weight: 700;
+          color: #0f172a;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          letter-spacing: -0.01em;
+        }
+
+        .bento-grid {
+          display: grid;
+          grid-template-columns: 1.3fr 1fr;
+          gap: 1.5rem;
+          margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 1024px) {
+          .bento-grid {
+            grid-template-columns: 1fr;
           }
         }
-        @keyframes strokeAnim {
-          from {
-            stroke-dashoffset: 251.2;
-          }
+
+        .activity-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          padding: 0.85rem 1.25rem;
+          border-radius: 12px;
+          gap: 1rem;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
+
+        .activity-row:hover {
+          background: #ffffff;
+          border-color: #cbd5e1;
+          transform: translateX(4px);
+          box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05);
+        }
+
+        .status-ring-box {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 1rem;
+          text-align: center;
+          transition: all 0.2s ease;
+        }
+
+        .status-ring-box:hover {
+          background: #ffffff;
+          border-color: #cbd5e1;
+          box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+        }
+
+        .triage-box:hover {
+          background: #ffffff !important;
+          border-color: #cbd5e1 !important;
+          box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+          transform: translateY(-2px);
+        }
+
+        @keyframes pulseSync {
+          0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+          70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .sync-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #10b981;
+          animation: pulseSync 2s infinite;
+          display: inline-block;
+        }
+
         .donut-segment {
-          animation: strokeAnim 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+          animation: strokeAnim 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
         }
-        .chart-marker-group:hover circle {
-          stroke-width: 4.5px;
-          transform: scale(1.1);
-          transition: transform 0.2s ease, stroke-width 0.2s ease;
+
+        @keyframes strokeAnim {
+          from { stroke-dashoffset: 251.2; }
         }
       `}</style>
     </div>
