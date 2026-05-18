@@ -78,7 +78,7 @@ async function generateSQL(prompt) {
           "Authorization": `Bearer ${process.env.NVIDIA_API_KEY}`
         },
         body: JSON.stringify({
-          model: "meta/llama-3.1-70b-instruct",
+          model: process.env.NVIDIA_MODEL || "deepseek-ai/deepseek-v4-flash",
           messages: [
             { role: "system", content: SCHEMA_CONTEXT },
             { role: "user", content: `User request: ${prompt}\n\nGenerate ONLY the raw MySQL query. No markdown formatting, no code blocks, no explanations.` }
@@ -188,7 +188,7 @@ async function askLlama(prompt, systemPrompt = "You are a helpful IT operations 
           "Authorization": `Bearer ${process.env.NVIDIA_API_KEY}`
         },
         body: JSON.stringify({
-          model: "meta/llama-3.1-70b-instruct",
+          model: process.env.NVIDIA_MODEL || "deepseek-ai/deepseek-v4-flash",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: prompt }
