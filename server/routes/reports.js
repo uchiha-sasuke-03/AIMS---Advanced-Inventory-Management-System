@@ -8,17 +8,30 @@ const { askLlama } = require('../utils/aiAgent');
 router.get('/stock', auth, async (req, res) => {
   try {
     const [summary] = await pool.query(`
+      WITH asset_derived AS (
+        SELECT 
+          a.id,
+          a.category_id,
+          a.price,
+          CASE
+            WHEN a.status = 'retired' THEN 'retired'
+            WHEN EXISTS (SELECT 1 FROM allocations al WHERE al.asset_id = a.id AND al.returned_at IS NULL) THEN 'allocated'
+            WHEN EXISTS (SELECT 1 FROM damage_reports dr WHERE dr.asset_id = a.id AND dr.resolved = 0) THEN 'damaged'
+            ELSE 'in_stock'
+          END AS status
+        FROM assets a
+      )
       SELECT 
         ac.id as category_id,
         ac.name as category_name,
-        COUNT(a.id) as total_assets,
-        SUM(CASE WHEN a.status = 'in_stock' THEN 1 ELSE 0 END) as in_stock,
-        SUM(CASE WHEN a.status = 'allocated' THEN 1 ELSE 0 END) as allocated,
-        SUM(CASE WHEN a.status = 'damaged' THEN 1 ELSE 0 END) as damaged,
-        SUM(CASE WHEN a.status = 'retired' THEN 1 ELSE 0 END) as retired,
-        SUM(a.price) as total_value
+        COUNT(ad.id) as total_assets,
+        SUM(CASE WHEN ad.status = 'in_stock' THEN 1 ELSE 0 END) as in_stock,
+        SUM(CASE WHEN ad.status = 'allocated' THEN 1 ELSE 0 END) as allocated,
+        SUM(CASE WHEN ad.status = 'damaged' THEN 1 ELSE 0 END) as damaged,
+        SUM(CASE WHEN ad.status = 'retired' THEN 1 ELSE 0 END) as retired,
+        SUM(ad.price) as total_value
       FROM asset_categories ac
-      LEFT JOIN assets a ON ac.id = a.category_id
+      LEFT JOIN asset_derived ad ON ac.id = ad.category_id
       GROUP BY ac.id, ac.name
       ORDER BY ac.name
     `);
@@ -28,6 +41,17 @@ router.get('/stock', auth, async (req, res) => {
 
     // Overall stats
     const [overallStats] = await pool.query(`
+      WITH asset_derived AS (
+        SELECT 
+          price,
+          CASE
+            WHEN status = 'retired' THEN 'retired'
+            WHEN EXISTS (SELECT 1 FROM allocations al WHERE al.asset_id = id AND al.returned_at IS NULL) THEN 'allocated'
+            WHEN EXISTS (SELECT 1 FROM damage_reports dr WHERE dr.asset_id = id AND dr.resolved = 0) THEN 'damaged'
+            ELSE 'in_stock'
+          END AS status
+        FROM assets
+      )
       SELECT 
         COUNT(*) as total_assets,
         SUM(CASE WHEN status = 'in_stock' THEN 1 ELSE 0 END) as in_stock,
@@ -35,7 +59,7 @@ router.get('/stock', auth, async (req, res) => {
         SUM(CASE WHEN status = 'damaged' THEN 1 ELSE 0 END) as damaged,
         SUM(CASE WHEN status = 'retired' THEN 1 ELSE 0 END) as retired,
         SUM(price) as total_value
-      FROM assets
+      FROM asset_derived
     `);
 
     // Fetch active assets details to calculate overall depreciated Book Value (WDV)
@@ -164,12 +188,23 @@ router.get('/stock', auth, async (req, res) => {
 
     // Location breakdown
     const [locationBreakdown] = await pool.query(`
+      WITH asset_derived AS (
+        SELECT 
+          location,
+          CASE
+            WHEN status = 'retired' THEN 'retired'
+            WHEN EXISTS (SELECT 1 FROM allocations al WHERE al.asset_id = id AND al.returned_at IS NULL) THEN 'allocated'
+            WHEN EXISTS (SELECT 1 FROM damage_reports dr WHERE dr.asset_id = id AND dr.resolved = 0) THEN 'damaged'
+            ELSE 'in_stock'
+          END AS status
+        FROM assets
+        WHERE location IS NOT NULL
+      )
       SELECT 
         location,
         COUNT(*) as count,
         SUM(CASE WHEN status = 'in_stock' THEN 1 ELSE 0 END) as in_stock
-      FROM assets
-      WHERE location IS NOT NULL
+      FROM asset_derived
       GROUP BY location
       ORDER BY count DESC
     `);

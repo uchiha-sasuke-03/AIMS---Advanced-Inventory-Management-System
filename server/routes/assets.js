@@ -8,8 +8,23 @@ router.get('/', auth, async (req, res) => {
   try {
     const { status, location, category_id, search, page = 1, limit = 20 } = req.query;
     let query = `
-      SELECT a.*, ac.name as category_name,
+      SELECT a.id, a.category_id, a.name, a.model, a.serial_number, a.purchase_date, a.price, a.location, a.created_at, a.updated_at,
+             CASE
+               WHEN a.status = 'retired' THEN 'retired'
+               WHEN EXISTS (SELECT 1 FROM allocations al WHERE al.asset_id = a.id AND al.returned_at IS NULL) THEN 'allocated'
+               WHEN EXISTS (SELECT 1 FROM damage_reports dr WHERE dr.asset_id = a.id AND dr.resolved = 0) THEN 'damaged'
+               ELSE 'in_stock'
+             END AS status,
+             ac.name as category_name,
              u.name as allocated_to_name, u.emp_id as allocated_to_emp_id
+      FROM assets a 
+      LEFT JOIN asset_categories ac ON a.category_id = ac.id 
+      LEFT JOIN allocations al ON al.asset_id = a.id AND al.returned_at IS NULL
+      LEFT JOIN users u ON al.user_id = u.id
+      WHERE 1=1
+    `;
+    let countQuery = `
+      SELECT COUNT(*) as total 
       FROM assets a 
       LEFT JOIN asset_categories ac ON a.category_id = ac.id 
       LEFT JOIN allocations al ON al.asset_id = a.id AND al.returned_at IS NULL
@@ -19,25 +34,40 @@ router.get('/', auth, async (req, res) => {
     const params = [];
 
     if (status) {
-      query += ' AND a.status = ?';
-      params.push(status);
+      let statusFilter = '';
+      if (status === 'retired') {
+        statusFilter = " AND a.status = 'retired'";
+      } else if (status === 'allocated') {
+        statusFilter = " AND EXISTS (SELECT 1 FROM allocations al WHERE al.asset_id = a.id AND al.returned_at IS NULL) AND a.status != 'retired'";
+      } else if (status === 'damaged') {
+        statusFilter = " AND EXISTS (SELECT 1 FROM damage_reports dr WHERE dr.asset_id = a.id AND dr.resolved = 0) AND a.status != 'retired'";
+      } else if (status === 'in_stock') {
+        statusFilter = " AND NOT EXISTS (SELECT 1 FROM allocations al WHERE al.asset_id = a.id AND al.returned_at IS NULL) AND NOT EXISTS (SELECT 1 FROM damage_reports dr WHERE dr.asset_id = a.id AND dr.resolved = 0) AND a.status != 'retired'";
+      }
+      query += statusFilter;
+      countQuery += statusFilter;
     }
     if (location) {
-      query += ' AND a.location = ?';
+      const locFilter = ' AND a.location = ?';
+      query += locFilter;
+      countQuery += locFilter;
       params.push(location);
     }
     if (category_id) {
-      query += ' AND a.category_id = ?';
+      const catFilter = ' AND a.category_id = ?';
+      query += catFilter;
+      countQuery += catFilter;
       params.push(parseInt(category_id));
     }
     if (search) {
-      query += ' AND (a.name LIKE ? OR a.model LIKE ? OR a.serial_number LIKE ?)';
+      const searchFilter = ' AND (a.name LIKE ? OR a.model LIKE ? OR a.serial_number LIKE ?)';
+      query += searchFilter;
+      countQuery += searchFilter;
       const searchTerm = `%${search}%`;
       params.push(searchTerm, searchTerm, searchTerm);
     }
 
     // Count total
-    const countQuery = query.replace(/SELECT a\.\*[\s\S]*?FROM assets a/i, 'SELECT COUNT(*) as total FROM assets a');
     const [countResult] = await pool.query(countQuery, params);
     const total = countResult[0].total;
 
@@ -67,7 +97,14 @@ router.get('/', auth, async (req, res) => {
 router.get('/:id', auth, async (req, res) => {
   try {
     const [assets] = await pool.query(
-      `SELECT a.*, ac.name as category_name 
+      `SELECT a.id, a.category_id, a.name, a.model, a.serial_number, a.purchase_date, a.price, a.location, a.created_at, a.updated_at,
+              CASE
+                WHEN a.status = 'retired' THEN 'retired'
+                WHEN EXISTS (SELECT 1 FROM allocations al WHERE al.asset_id = a.id AND al.returned_at IS NULL) THEN 'allocated'
+                WHEN EXISTS (SELECT 1 FROM damage_reports dr WHERE dr.asset_id = a.id AND dr.resolved = 0) THEN 'damaged'
+                ELSE 'in_stock'
+              END AS status,
+              ac.name as category_name 
        FROM assets a 
        LEFT JOIN asset_categories ac ON a.category_id = ac.id 
        WHERE a.id = ?`,
@@ -187,7 +224,14 @@ router.get('/:id/history', auth, async (req, res) => {
 
     // 1. Fetch asset details
     const [assets] = await pool.query(`
-      SELECT a.*, c.name as category_name
+      SELECT a.id, a.category_id, a.name, a.model, a.serial_number, a.purchase_date, a.price, a.location, a.created_at, a.updated_at,
+             CASE
+               WHEN a.status = 'retired' THEN 'retired'
+               WHEN EXISTS (SELECT 1 FROM allocations al WHERE al.asset_id = a.id AND al.returned_at IS NULL) THEN 'allocated'
+               WHEN EXISTS (SELECT 1 FROM damage_reports dr WHERE dr.asset_id = a.id AND dr.resolved = 0) THEN 'damaged'
+               ELSE 'in_stock'
+             END AS status,
+             c.name as category_name
       FROM assets a
       JOIN asset_categories c ON a.category_id = c.id
       WHERE a.id = ?

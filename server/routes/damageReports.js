@@ -258,4 +258,27 @@ router.put('/:id', auth, adminOnly, async (req, res) => {
   }
 });
 
+// GET /api/damage-reports/photo/:filename - Retrieve damage photo securely with authentication
+router.get('/photo/:filename', auth, async (req, res) => {
+  try {
+    const filename = req.params.filename;
+    // Sanitization to prevent directory traversal
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({ error: 'Invalid filename' });
+    }
+    
+    const path = require('path');
+    const fs = require('fs');
+    const filePath = path.join(__dirname, '..', '..', 'secure-uploads', 'damage-reports', filename);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error('Fetch secure photo error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;

@@ -5,6 +5,44 @@ import api from '../utils/api';
 import { useToast } from '../context/ToastContext';
 import { formatDate, formatINR } from '../utils/formatters';
 
+function SecureImage({ filename, alt, style }) {
+  const [src, setSrc] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    const fetchImage = async () => {
+      try {
+        const response = await api.get(`/damage-reports/photo/${filename}`, { responseType: 'blob' });
+        const objectURL = URL.createObjectURL(response.data);
+        if (active) setSrc(objectURL);
+      } catch (err) {
+        console.error('Failed to load secure image:', err);
+      }
+    };
+    fetchImage();
+    return () => {
+      active = false;
+      if (src) URL.revokeObjectURL(src);
+    };
+  }, [filename]);
+
+  if (!src) {
+    return (
+      <div style={{
+        fontSize: '0.75rem',
+        color: 'var(--text-tertiary)',
+        padding: '0.5rem',
+        border: '1px dashed var(--border-primary)',
+        borderRadius: 8,
+        display: 'inline-block'
+      }}>
+        Loading secure photo...
+      </div>
+    );
+  }
+  return <img src={src} alt={alt} style={style} />;
+}
+
 export default function DamageLog() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -139,6 +177,16 @@ export default function DamageLog() {
                   <span><Calendar size={12} /> Filed: {formatDate(report.reported_at)}</span>
                   <span>📍 Location: {report.location || 'Unknown'}</span>
                 </div>
+                {report.photo_path && (
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <span className="text-xs text-secondary" style={{ display: 'block', marginBottom: '0.375rem', fontWeight: 600 }}>📎 Secure Photo Evidence:</span>
+                    <SecureImage 
+                      filename={report.photo_path} 
+                      alt="Damage Evidence" 
+                      style={{ maxWidth: '280px', borderRadius: '8px', border: '1px solid var(--border-primary)', display: 'block' }} 
+                    />
+                  </div>
+                )}
               </div>
 
               {/* AI TRIAGE WIDGET */}
