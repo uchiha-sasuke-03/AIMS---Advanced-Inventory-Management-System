@@ -1,0 +1,394 @@
+{
+  "info": {
+    "_postman_id": "8fa52f89-7cfc-4db2-9477-d6b38c292d2f",
+    "name": "AIMS API Collection",
+    "description": "Postman Collection for Advanced Inventory Management System (AIMS) Backend REST API endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "User Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@techcorp.co.in\",\n  \"password\": \"Admin@123\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/auth/login",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current Authenticated User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/auth/me",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Assets",
+      "item": [
+        {
+          "name": "Get All Assets (Dynamic Filter & Search)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/assets?search=macbook&status=in_stock",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "assets"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "macbook"
+                },
+                {
+                  "key": "status",
+                  "value": "in_stock"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create New Physical Asset",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dell UltraSharp 32 Monitor\",\n  \"category_id\": 2,\n  \"serial_number\": \"DELL-US-32-0099\",\n  \"model\": \"U3223QE\",\n  \"purchase_date\": \"2026-01-15\",\n  \"price\": 64500,\n  \"location\": \"Mumbai Campus\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/assets",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "assets"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Asset Details by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/assets/1",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "assets",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Allocations & Custody Workflow",
+      "item": [
+        {
+          "name": "Allocate Asset to Employee with Canvas Signature",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asset_id\": 1,\n  \"user_id\": 3,\n  \"signature_data\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...\",\n  \"expected_return_date\": \"2026-12-31\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/allocations",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "allocations"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Return Allocated Asset",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asset_id\": 1,\n  \"return_date\": \"2026-05-18\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/returns",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "returns"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Damage & Repairs (Secure JWT-Protected)",
+      "item": [
+        {
+          "name": "Get All Active Damage Logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/damage-reports",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "damage-reports"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit Damage Report with Photo (Form Data)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "asset_id",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "severity",
+                  "value": "critical",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Liquid spilled on keyboard causing motherboard failure",
+                  "type": "text"
+                },
+                {
+                  "key": "photo",
+                  "type": "file",
+                  "src": "/path/to/damage_photo.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/damage-reports",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "damage-reports"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Secure authorized photo stream gateway",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/damage-reports/photo/damage-1779085023912.jpg",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "damage-reports",
+                "photo",
+                "damage-1779085023912.jpg"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "NVIDIA AI Natural Language Engine",
+      "item": [
+        {
+          "name": "Conversational Inventory Query",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prompt\": \"Which campus location currently holds the most active in stock devices?\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/ai/query",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "ai",
+                "query"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "jwt_token",
+      "value": "your_generated_jwt_token_here",
+      "type": "string"
+    }
+  ]
+}
