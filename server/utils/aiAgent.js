@@ -66,6 +66,17 @@ IMPORTANT RULES:
 7. NEVER generate DROP, TRUNCATE, or ALTER TABLE statements.
 8. NEVER modify the password_hash column.
 9. Return ONLY the raw SQL query, nothing else. No markdown, no explanations.
+10. The 'users' table does NOT have a 'location' column. To query the location of a user/employee, JOIN 'users' with 'allocations' and 'assets', filtering for active allocations (returned_at IS NULL) and matching the asset's location.
+
+FEW-SHOT EXAMPLES:
+* User request: "how many employees in Mumbai?"
+Query: SELECT COUNT(DISTINCT u.id) FROM users u JOIN allocations al ON u.id = al.user_id JOIN assets a ON al.asset_id = a.id WHERE a.location = 'Mumbai' AND al.returned_at IS NULL;
+
+* User request: "show all laptops in stock in Bengaluru"
+Query: SELECT a.* FROM assets a JOIN asset_categories c ON a.category_id = c.id WHERE c.name = 'Laptops' AND a.status = 'in_stock' AND a.location = 'Bengaluru';
+
+* User request: "How many assets are allocated?"
+Query: SELECT COUNT(*) FROM assets WHERE status = 'allocated';
 `;
 
 async function generateSQL(prompt) {
