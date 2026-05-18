@@ -235,7 +235,7 @@ router.get('/stock', auth, async (req, res) => {
 // GET /api/reports/employee/:id - All allocations for an employee
 router.get('/employee/:id', auth, async (req, res) => {
   try {
-    const [user] = await pool.query('SELECT id, emp_id, name, email, department FROM users WHERE id = ?', [req.params.id]);
+    const [user] = await pool.query('SELECT id, emp_id, name, email, department, designation, photo_path, role, is_active, created_at FROM users WHERE id = ?', [req.params.id]);
     if (user.length === 0) {
       return res.status(404).json({ error: 'Employee not found' });
     }
@@ -309,20 +309,43 @@ router.get('/asset/:id', auth, async (req, res) => {
       ORDER BY dr.reported_at DESC
     `, [req.params.id]);
 
+    const [scanLogs] = await pool.query(`
+      SELECT sl.*, u.name as scanned_by_name
+      FROM scan_logs sl
+      LEFT JOIN users u ON sl.scanned_by = u.id
+      WHERE sl.asset_id = ?
+      ORDER BY sl.scanned_at DESC
+    `, [req.params.id]);
+
     res.json({
       asset: asset[0],
       allocations,
       damageReports,
+      scanLogs,
       timeline: [
+        // 1. Original allocation events
         ...allocations.map(a => ({
-          type: a.returned_at ? 'return' : 'allocation',
-          date: a.returned_at || a.allocated_at,
+          type: 'allocation',
+          date: a.allocated_at,
           details: a
         })),
+        // 2. Return events (if active return is completed)
+        ...allocations.filter(a => a.returned_at).map(a => ({
+          type: 'return',
+          date: a.returned_at,
+          details: a
+        })),
+        // 3. Maintenance & damage report events
         ...damageReports.map(d => ({
           type: 'damage',
           date: d.reported_at,
           details: d
+        })),
+        // 4. QR code scan audit logs
+        ...scanLogs.map(s => ({
+          type: 'scan',
+          date: s.scanned_at,
+          details: s
         }))
       ].sort((a, b) => new Date(b.date) - new Date(a.date))
     });

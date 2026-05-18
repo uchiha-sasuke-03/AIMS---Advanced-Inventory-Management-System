@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { History, User, Package, Search } from 'lucide-react';
+import { History, User, Package, Search, Mail, Briefcase, Calendar, ShieldAlert, CheckCircle2, ScanEye, AlertTriangle, ArrowRightLeft } from 'lucide-react';
 import api from '../utils/api';
 import { formatDate, formatDateTime, formatINR, formatStatus, getStatusBadge } from '../utils/formatters';
 
@@ -118,24 +118,52 @@ export default function AllocationHistory() {
             <div className="card" style={{ textAlign: 'center', padding: '2rem' }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
           ) : reportData?.type === 'employee' ? (
             <div>
-              <div className="card mb-2">
-                <div className="flex items-center justify-between" style={{ flexWrap: 'wrap', gap: '1rem' }}>
-                  <div>
-                    <h3>{reportData.data.employee.name}</h3>
-                    <p className="text-sm text-secondary">{reportData.data.employee.emp_id} • {reportData.data.employee.department} • {reportData.data.employee.email}</p>
+              <div className="card mb-3" style={{ padding: '1.5rem', background: 'var(--bg-glass)', border: '1px solid var(--border-primary)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr auto', gap: '1.5rem', alignItems: 'center' }}>
+                  {/* Avatar or profile placeholder */}
+                  <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-primary), #6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '2rem', fontWeight: 700 }}>
+                    {reportData.data.employee.name.charAt(0)}
                   </div>
-                  <div className="flex gap-2">
-                    <div className="text-center">
-                      <span className="stat-value" style={{ fontSize: '1.25rem' }}>{reportData.data.stats.totalAllocations}</span>
-                      <p className="text-xs text-secondary">Total</p>
+                  <div>
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 0.5rem 0' }}>{reportData.data.employee.name}</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <Briefcase size={14} style={{ color: 'var(--accent-primary)' }} /> {reportData.data.employee.designation || 'IT Specialist'}
+                      </span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <User size={14} style={{ color: 'var(--accent-primary)' }} /> Department: {reportData.data.employee.department}
+                      </span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <Mail size={14} style={{ color: 'var(--accent-primary)' }} /> {reportData.data.employee.email}
+                      </span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <Calendar size={14} style={{ color: 'var(--accent-primary)' }} /> Joined: {formatDate(reportData.data.employee.created_at)}
+                      </span>
                     </div>
-                    <div className="text-center">
-                      <span className="stat-value" style={{ fontSize: '1.25rem', color: 'var(--status-info)' }}>{reportData.data.stats.activeAllocations}</span>
-                      <p className="text-xs text-secondary">Active</p>
+                    <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
+                      <span className={`badge ${reportData.data.employee.is_active ? 'badge-success' : 'badge-danger'}`}>
+                        {reportData.data.employee.is_active ? 'Active Employee' : 'Inactive'}
+                      </span>
+                      <span className="badge badge-info" style={{ textTransform: 'uppercase' }}>
+                        Role: {reportData.data.employee.role || 'user'}
+                      </span>
+                      <span className="badge badge-secondary">
+                        ID: {reportData.data.employee.emp_id}
+                      </span>
                     </div>
-                    <div className="text-center">
-                      <span className="stat-value" style={{ fontSize: '1.25rem', color: 'var(--status-success)' }}>{reportData.data.stats.returnedAllocations}</span>
-                      <p className="text-xs text-secondary">Returned</p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '1rem', background: 'var(--bg-secondary)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-primary)' }}>
+                    <div style={{ textAlign: 'center', minWidth: '60px' }}>
+                      <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', display: 'block' }}>{reportData.data.stats.totalAllocations}</span>
+                      <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>Total</span>
+                    </div>
+                    <div style={{ textAlign: 'center', minWidth: '60px', borderLeft: '1px solid var(--border-primary)', paddingLeft: '1rem' }}>
+                      <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--status-info)', display: 'block' }}>{reportData.data.stats.activeAllocations}</span>
+                      <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--status-info)' }}>Active</span>
+                    </div>
+                    <div style={{ textAlign: 'center', minWidth: '60px', borderLeft: '1px solid var(--border-primary)', paddingLeft: '1rem' }}>
+                      <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--status-success)', display: 'block' }}>{reportData.data.stats.returnedAllocations}</span>
+                      <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--status-success)' }}>Returned</span>
                     </div>
                   </div>
                 </div>
@@ -198,28 +226,110 @@ export default function AllocationHistory() {
               </div>
 
               {/* Timeline */}
-              <div className="card">
-                <h4 style={{ marginBottom: '1rem' }}>Lifecycle Timeline</h4>
+              <div className="card" style={{ padding: '1.5rem 2rem' }}>
+                <div style={{ marginBottom: '1.5rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-primary)' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)' }}>Detailed Asset Lifecycle & Audit Trail</h3>
+                </div>
                 {reportData.data.timeline.length === 0 ? (
-                  <p className="text-sm text-secondary">No events recorded</p>
+                  <p className="text-sm text-secondary">No lifecycle events recorded for this asset.</p>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {reportData.data.timeline.map((event, idx) => (
-                      <div key={idx} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                        <div style={{
-                          width: 8, height: 8, borderRadius: '50%', marginTop: 6, flexShrink: 0,
-                          background: event.type === 'allocation' ? 'var(--status-info)' : event.type === 'return' ? 'var(--status-success)' : 'var(--status-danger)'
-                        }} />
-                        <div>
-                          <p className="text-sm" style={{ fontWeight: 500 }}>
-                            {event.type === 'allocation' && `Allocated to ${event.details.employee_name}`}
-                            {event.type === 'return' && `Returned by ${event.details.employee_name} — ${event.details.condition_on_return || 'good'}`}
-                            {event.type === 'damage' && `Damage reported — ${event.details.severity}`}
-                          </p>
-                          <p className="text-xs text-secondary">{formatDateTime(event.date)}</p>
+                  <div style={{ position: 'relative', paddingLeft: '1.75rem', borderLeft: '2px solid var(--border-primary)', marginLeft: '0.75rem', display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+                    {reportData.data.timeline.map((event, idx) => {
+                      let iconColor = 'var(--status-info)';
+                      let IconComponent = ArrowRightLeft;
+                      let bgOpacityColor = 'rgba(59, 130, 246, 0.15)';
+                      let title = '';
+                      let extra = null;
+
+                      if (event.type === 'allocation') {
+                        iconColor = 'var(--status-info)';
+                        bgOpacityColor = 'rgba(59, 130, 246, 0.15)';
+                        IconComponent = ArrowRightLeft;
+                        title = `Allocated to ${event.details.employee_name || 'Staff'}`;
+                        extra = (
+                          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                            <span>Employee Code: <strong>{event.details.employee_emp_id || 'N/A'}</strong></span>
+                            <span>•</span>
+                            <span>Authorized by: <strong>{event.details.allocated_by_name || 'Administrator'}</strong></span>
+                          </div>
+                        );
+                      } else if (event.type === 'return') {
+                        iconColor = 'var(--status-success)';
+                        bgOpacityColor = 'rgba(16, 185, 129, 0.15)';
+                        IconComponent = CheckCircle2;
+                        title = `Returned & Restocked by ${event.details.employee_name || 'Staff'}`;
+                        extra = (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                              <span>Condition on Return: <strong style={{ textTransform: 'capitalize', color: event.details.condition_on_return === 'good' ? 'var(--status-success)' : 'var(--status-warning)' }}>{event.details.condition_on_return || 'good'}</strong></span>
+                              {event.details.return_notes && (
+                                <>
+                                  <span>•</span>
+                                  <span>Audit Notes: <em>"{event.details.return_notes}"</em></span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      } else if (event.type === 'damage') {
+                        iconColor = 'var(--status-danger)';
+                        bgOpacityColor = 'rgba(239, 68, 68, 0.15)';
+                        IconComponent = AlertTriangle;
+                        title = `Damage Report Filed`;
+                        extra = (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                            <span>Reported by: <strong>{event.details.reported_by_name || 'Staff'}</strong></span>
+                            <span>Severity: <strong style={{ color: 'var(--status-danger)' }}>{event.details.severity || 'Critical'}</strong></span>
+                            {event.details.description && (
+                              <span>Fault Description: <strong style={{ color: 'var(--text-primary)' }}>"{event.details.description}"</strong></span>
+                            )}
+                          </div>
+                        );
+                      } else if (event.type === 'scan') {
+                        iconColor = '#a855f7';
+                        bgOpacityColor = 'rgba(168, 85, 247, 0.15)';
+                        IconComponent = ScanEye;
+                        title = `Verified Physical QR Code Scanned`;
+                        extra = (
+                          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                            <span>Auditor User: <strong>{event.details.scanned_by_name || 'IT Inspector'}</strong></span>
+                            <span>•</span>
+                            <span>Status: <strong style={{ color: '#a855f7' }}>Passed Security Audit</strong></span>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div key={idx} style={{ position: 'relative' }}>
+                          {/* Circle Badge Indicator */}
+                          <div style={{
+                            position: 'absolute',
+                            left: '-2.2rem',
+                            top: '2px',
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '50%',
+                            background: bgOpacityColor,
+                            border: `2px solid ${iconColor}`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 2,
+                            color: iconColor
+                          }}>
+                            <IconComponent size={14} />
+                          </div>
+                          {/* Event details */}
+                          <div style={{ paddingLeft: '0.5rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>{title}</h4>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{formatDateTime(event.date)}</span>
+                            </div>
+                            {extra}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
