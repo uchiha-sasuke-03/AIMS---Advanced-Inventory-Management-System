@@ -3,6 +3,27 @@ const router = express.Router();
 const pool = require('../config/db');
 const { auth, adminOnly } = require('../middleware/auth');
 
+// Run automatic schema upgrade for scan_logs table on startup
+(async () => {
+  try {
+    const connection = await pool.getConnection();
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS scan_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        asset_id INT NOT NULL,
+        scanned_by INT NULL,
+        scanned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE,
+        FOREIGN KEY (scanned_by) REFERENCES users(id) ON DELETE SET NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    console.log('✅ Database migration: scan_logs table verified');
+    connection.release();
+  } catch (err) {
+    console.error('❌ Failed to run scan_logs schema migration:', err.message);
+  }
+})();
+
 // GET /api/assets - List all assets with filters
 router.get('/', auth, async (req, res) => {
   try {
@@ -242,6 +263,13 @@ router.get('/:id/history', auth, async (req, res) => {
     }
     const asset = assets[0];
 
+    // Log the QR view event
+    const userId = req.user ? req.user.id : null;
+    await pool.query(
+      'INSERT INTO scan_logs (asset_id, scanned_by) VALUES (?, ?)',
+      [assetId, userId]
+    );
+
     // 2. Fetch active and past allocations
     const [allocations] = await pool.query(`
       SELECT al.*, 
@@ -268,11 +296,21 @@ router.get('/:id/history', auth, async (req, res) => {
       ORDER BY dr.reported_at DESC
     `, [assetId]);
 
+    // 4. Fetch scan history
+    const [scanHistory] = await pool.query(`
+      SELECT sl.*, u.name as scanned_by_name, u.email as scanned_by_email, u.emp_id as scanned_by_emp_id
+      FROM scan_logs sl
+      LEFT JOIN users u ON sl.scanned_by = u.id
+      WHERE sl.asset_id = ?
+      ORDER BY sl.scanned_at DESC
+    `, [assetId]);
+
     res.json({
       asset,
       activeAllocation,
       allocationHistory,
-      damageReports
+      damageReports,
+      scanHistory
     });
   } catch (error) {
     console.error('Error fetching asset history details:', error);

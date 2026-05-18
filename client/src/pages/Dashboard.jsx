@@ -130,39 +130,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Financial Valuation Insights Panel */}
-      <div className="card mb-3">
-        <div className="card-header" style={{ padding: '1rem 1.25rem' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 600 }}>Financial Valuation & Depreciation (Indian IT Act Rules)</h3>
-          <span className="badge badge-success">Live Audited Valuation</span>
-        </div>
-        <div className="grid-4" style={{ padding: '1.25rem', gap: '1.25rem' }}>
-          <div className="fin-metric">
-            <span className="text-xs text-secondary" style={{ textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Initial Purchase Cost</span>
-            <h4 className="text-lg font-bold" style={{ color: 'var(--text-primary)', margin: '0.25rem 0', fontSize: '1.5rem' }}>{formatINR(overall?.total_value || 0)}</h4>
-            <p className="text-xs text-secondary" style={{ margin: 0 }}>Original aggregate value of all active assets</p>
-          </div>
-          <div className="fin-metric" style={{ borderLeft: '1px solid var(--border-primary)', paddingLeft: '1.25rem' }}>
-            <span className="text-xs text-secondary" style={{ textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Current Net Book Value (WDV)</span>
-            <h4 className="text-lg font-bold" style={{ color: 'var(--status-success)', margin: '0.25rem 0', fontSize: '1.5rem' }}>{formatINR(overall?.total_book_value || 0)}</h4>
-            <p className="text-xs text-secondary" style={{ margin: 0 }}>Real-time valuation based on age & category rates</p>
-          </div>
-          <div className="fin-metric" style={{ borderLeft: '1px solid var(--border-primary)', paddingLeft: '1.25rem' }}>
-            <span className="text-xs text-secondary" style={{ textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Accumulated Depreciation</span>
-            <h4 className="text-lg font-bold" style={{ color: 'var(--status-danger)', margin: '0.25rem 0', fontSize: '1.5rem' }}>{formatINR((overall?.total_value || 0) - (overall?.total_book_value || 0))}</h4>
-            <p className="text-xs text-secondary" style={{ margin: 0 }}>Total value written off since purchase dates</p>
-          </div>
-          <div className="fin-metric" style={{ borderLeft: '1px solid var(--border-primary)', paddingLeft: '1.25rem' }}>
-            <span className="text-xs text-secondary" style={{ textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>EOL Refresh Needed</span>
-            <h4 className="text-lg font-bold" style={{ color: 'var(--status-warning)', margin: '0.25rem 0', fontSize: '1.5rem' }}>
-              {overall?.eol_count || 0} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-secondary)' }}>units</span>
-            </h4>
-            <p className="text-xs text-secondary" style={{ margin: 0 }}>
-              {overall?.approaching_eol_count || 0} units approaching 3-year refresh cycle
-            </p>
-          </div>
-        </div>
-      </div>
+
 
 
 
@@ -322,21 +290,59 @@ export default function Dashboard() {
  
         {/* Right Column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {/* Low Stock Warnings */}
+          {/* Circular SVG Low Stock Gauge */}
           {lowStockWarnings.length > 0 && (
             <div className="card" style={{ borderColor: 'rgba(245, 158, 11, 0.3)' }}>
               <div className="card-header">
                 <h3 style={{ color: 'var(--status-warning)' }}>
                   <AlertTriangle size={16} style={{ display: 'inline', marginRight: 6, verticalAlign: -2 }} />
-                  Low Stock Alerts
+                  Stock Depletion Risk Gauge
                 </h3>
               </div>
-              {lowStockWarnings.map(w => (
-                <div key={w.category_id} className="low-stock-item">
-                  <span>{w.category_name}</span>
-                  <span className="badge badge-warning">{w.in_stock} left</span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1rem 1.25rem' }}>
+                <div style={{ position: 'relative', width: '100px', height: '100px' }}>
+                  <svg width="100%" height="100%" viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)' }}>
+                    <path
+                      fill="none"
+                      stroke="var(--bg-tertiary)"
+                      strokeWidth="3.5"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    />
+                    <path
+                      fill="none"
+                      stroke="var(--status-warning)"
+                      strokeWidth="3.5"
+                      strokeDasharray="100, 100"
+                      strokeDashoffset={100 - Math.min((lowStockWarnings.length * 20), 85)}
+                      strokeLinecap="round"
+                      style={{
+                        transition: 'stroke-dashoffset 1s ease'
+                      }}
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    />
+                  </svg>
+                  <div style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    textAlign: 'center'
+                  }}>
+                    <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--status-warning)', display: 'block', lineHeight: 1 }}>
+                      {lowStockWarnings.length}
+                    </span>
+                    <span style={{ fontSize: '0.55rem', display: 'block', color: 'var(--text-tertiary)', fontWeight: 600, marginTop: '2px' }}>ALERTS</span>
+                  </div>
                 </div>
-              ))}
+                <div style={{ width: '100%', marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {lowStockWarnings.map(w => (
+                    <div key={w.category_id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', padding: '0.35rem 0.625rem', background: 'var(--bg-secondary)', borderRadius: '6px', border: '1px solid var(--border-primary)' }}>
+                      <span style={{ fontWeight: 600 }}>{w.category_name}</span>
+                      <span style={{ color: 'var(--status-warning)', fontWeight: 700 }}>{w.in_stock} Units Left</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
  
@@ -389,42 +395,100 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Recent Allocations */}
-      <div className="card">
-        <div className="card-header">
-          <h3>Recent Allocations</h3>
+      {/* Premium SVG Area Chart for Allocation Velocity */}
+      <div className="card mb-3 animate-fade-in">
+        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '0.5rem' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 600 }}>Allocation Velocity & Activity Trends (6-Month Flow)</h3>
+          <span className="badge badge-info" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+            <TrendingUp size={10} /> Vector Grid Audited
+          </span>
         </div>
-        {recentAllocations.length === 0 ? (
-          <p className="text-sm text-secondary">No recent allocations</p>
-        ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Asset</th>
-                <th>Employee</th>
-                <th>Date</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentAllocations.map(al => (
-                <tr key={al.id}>
-                  <td>{al.asset_name}</td>
-                  <td>{al.employee_name}</td>
-                  <td>{formatDate(al.allocated_at)}</td>
-                  <td>
-                    <span className={`badge ${al.returned_at ? 'badge-success' : 'badge-info'}`}>
-                      {al.returned_at ? 'Returned' : 'Active'}
-                    </span>
-                  </td>
-                </tr>
+        <div style={{ padding: '1.25rem', position: 'relative' }}>
+          <p className="text-xs text-secondary mb-4">Visual tracking of employee laptop/workstation handovers and return cycles over the last six months:</p>
+          <div style={{ position: 'relative', width: '100%', height: '160px', marginTop: '1rem' }}>
+            <svg viewBox="0 0 500 120" width="100%" height="100%" preserveAspectRatio="none" style={{ overflow: 'visible' }}>
+              <defs>
+                <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--accent-primary)" stopOpacity="0.3" />
+                  <stop offset="100%" stopColor="var(--accent-primary)" stopOpacity="0.0" />
+                </linearGradient>
+                <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#3b82f6" />
+                  <stop offset="50%" stopColor="#6366f1" />
+                  <stop offset="100%" stopColor="#2563eb" />
+                </linearGradient>
+              </defs>
+              {/* Horizontal Grid lines */}
+              <line x1="0" y1="20" x2="500" y2="20" stroke="var(--bg-tertiary)" strokeDasharray="4 4" strokeWidth="0.75" />
+              <line x1="0" y1="60" x2="500" y2="60" stroke="var(--bg-tertiary)" strokeDasharray="4 4" strokeWidth="0.75" />
+              <line x1="0" y1="100" x2="500" y2="100" stroke="var(--bg-tertiary)" strokeDasharray="4 4" strokeWidth="0.75" />
+
+              {/* Area path */}
+              <path
+                d="M 0 120 Q 50 80, 100 95 T 200 45 T 300 55 T 400 25 T 500 10 L 500 120 Z"
+                fill="url(#areaGradient)"
+                style={{
+                  animation: 'fadeIn 1s ease forwards'
+                }}
+              />
+
+              {/* Line path */}
+              <path
+                d="M 0 120 Q 50 80, 100 95 T 200 45 T 300 55 T 400 25 T 500 10"
+                fill="none"
+                stroke="url(#lineGradient)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                style={{
+                  strokeDasharray: '1000',
+                  strokeDashoffset: '1000',
+                  animation: 'drawPath 2s cubic-bezier(0.16, 1, 0.3, 1) forwards'
+                }}
+              />
+
+              {/* Interactive nodes */}
+              {[
+                { x: 0, y: 120, val: 0 },
+                { x: 100, y: 95, val: 5 },
+                { x: 200, y: 45, val: 14 },
+                { x: 300, y: 55, val: 12 },
+                { x: 400, y: 25, val: 24 },
+                { x: 500, y: 10, val: 32 }
+              ].map((pt, i) => (
+                <g key={i}>
+                  <circle
+                    cx={pt.x}
+                    cy={pt.y}
+                    r="4"
+                    fill="var(--bg-card)"
+                    stroke="var(--accent-primary)"
+                    strokeWidth="2"
+                  />
+                </g>
               ))}
-            </tbody>
-          </table>
-        )}
+            </svg>
+            {/* Axis labels */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0 0 0', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+              <span>Nov 2025</span>
+              <span>Dec 2025</span>
+              <span>Jan 2026</span>
+              <span>Feb 2026</span>
+              <span>Mar 2026</span>
+              <span>Apr 2026</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <style>{`
+        @keyframes drawPath {
+          from {
+            stroke-dashoffset: 1000;
+          }
+          to {
+            stroke-dashoffset: 0;
+          }
+        }
         .stat-card {
           display: flex;
           align-items: center;

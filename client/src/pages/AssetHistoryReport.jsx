@@ -51,7 +51,7 @@ export default function AssetHistoryReport() {
     );
   }
 
-  const { asset, activeAllocation, allocationHistory, damageReports } = data;
+  const { asset, activeAllocation, allocationHistory, damageReports, scanHistory } = data;
 
   // --- Depreciation Straight-Line Model Calculations ---
   const purchasePrice = parseFloat(asset.price) || 0;
@@ -366,6 +366,49 @@ export default function AssetHistoryReport() {
             </div>
           )}
         </div>
+
+        {/* 5. PHYSICAL QR CODE SCAN AUDIT LOG */}
+        <div className="card">
+          <h3 className="mb-4" style={{ fontSize: '1.125rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
+            <Clock size={18} className="text-info" />
+            <span>Physical QR Code Scan History</span>
+          </h3>
+
+          {(!scanHistory || scanHistory.length === 0) ? (
+            <p className="text-sm text-secondary italic">This asset's physical QR tag has not been scanned yet.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '350px', overflowY: 'auto' }}>
+              {scanHistory.map(sl => (
+                <div 
+                  key={sl.id} 
+                  style={{ 
+                    padding: '0.75rem 1rem', 
+                    background: 'var(--bg-secondary)', 
+                    border: '1px solid var(--border-primary)',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>
+                      QR Scanned by {sl.scanned_by_name || 'Anonymous Visitor'}
+                    </div>
+                    {sl.scanned_by_email && (
+                      <div className="text-xs text-secondary">{sl.scanned_by_email}</div>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <span className="badge badge-info" style={{ fontSize: '0.65rem' }}>Verified Scan</span>
+                    <div className="text-xs text-secondary mt-1">{new Date(sl.scanned_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} {new Date(sl.scanned_at).toLocaleDateString()}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );

@@ -476,16 +476,16 @@ export default function Finance() {
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                               <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}>
-                                {lic.provider[0].toUpperCase()}
+                                {lic.name ? lic.name[0].toUpperCase() : 'S'}
                               </div>
                               <div>
-                                <div style={{ fontWeight: 600 }}>{lic.provider}</div>
-                                <span className="text-xs text-secondary">{lic.license_key}</span>
+                                <div style={{ fontWeight: 600 }}>{lic.name}</div>
+                                <span className="text-xs text-secondary">Renewal: {formatDate(lic.renewal_date)}</span>
                               </div>
                             </div>
                           </td>
                           <td>
-                            <span className="badge badge-secondary" style={{ fontSize: '0.7rem' }}>{lic.license_type}</span>
+                            <span className="badge badge-secondary" style={{ fontSize: '0.7rem' }}>{lic.category}</span>
                           </td>
                           <td style={{ textAlign: 'center' }}>
                             <strong>{lic.occupied_seats}</strong> / <span className="text-secondary">{lic.total_seats} Assigned</span>
@@ -532,17 +532,17 @@ export default function Finance() {
                     </thead>
                     <tbody>
                       {employeeSaaS.map(emp => (
-                        <tr key={emp.employee_id}>
+                        <tr key={emp.id}>
                           <td>
-                            <div style={{ fontWeight: 600 }}>{emp.employee_name}</div>
-                            <code style={{ fontSize: '0.7rem', color: 'var(--text-accent)' }}>{emp.employee_emp_id}</code>
+                            <div style={{ fontWeight: 600 }}>{emp.name}</div>
+                            <code style={{ fontSize: '0.7rem', color: 'var(--text-accent)' }}>{emp.emp_id}</code>
                           </td>
-                          <td>{emp.employee_department}</td>
+                          <td>{emp.department}</td>
                           <td>
                             <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
-                              {(emp.allocated_software || '').split(', ').map((soft, index) => (
-                                <span key={index} className="badge badge-info" style={{ fontSize: '0.65rem' }}>
-                                  {soft}
+                              {(emp.allocated_licenses || []).map((lic, index) => (
+                                <span key={lic.id || index} className="badge badge-info" style={{ fontSize: '0.65rem' }}>
+                                  {lic.name}
                                 </span>
                               ))}
                             </div>

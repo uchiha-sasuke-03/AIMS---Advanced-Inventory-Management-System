@@ -11,7 +11,6 @@ const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/employees', icon: Users, label: 'Employees' },
   { to: '/assets', icon: Package, label: 'Assets' },
-  { to: '/assets/new', icon: PlusCircle, label: 'Add Asset' },
   { to: '/allocations', icon: ArrowLeftRight, label: 'Allocations' },
   { to: '/returns', icon: RotateCcw, label: 'Returns' },
   { to: '/damage-reports', icon: AlertTriangle, label: 'Damage Log' },

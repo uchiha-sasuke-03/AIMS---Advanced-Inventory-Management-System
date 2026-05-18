@@ -4,7 +4,7 @@ import api from '../utils/api';
 import { formatDate, formatDateTime, formatINR, formatStatus, getStatusBadge } from '../utils/formatters';
 
 export default function AllocationHistory() {
-  const [tab, setTab] = useState('all');
+  const [tab, setTab] = useState('employee');
   const [allocations, setAllocations] = useState([]);
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState('');
@@ -89,7 +89,6 @@ export default function AllocationHistory() {
       {/* Tab Selector */}
       <div className="flex gap-1 mb-3" style={{ borderBottom: '1px solid var(--border-primary)', paddingBottom: '0.5rem' }}>
         {[
-          { key: 'all', label: 'All History', icon: History },
           { key: 'employee', label: 'By Employee', icon: User },
           { key: 'asset', label: 'By Asset', icon: Package },
         ].map(t => (
@@ -102,52 +101,6 @@ export default function AllocationHistory() {
           </button>
         ))}
       </div>
-
-      {/* All History Tab */}
-      {tab === 'all' && (
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          {loading ? (
-            <div style={{ padding: '2rem', textAlign: 'center' }}><div className="spinner" style={{ margin: '0 auto' }} /></div>
-          ) : allocations.length === 0 ? (
-            <div className="empty-state"><h3>No allocation history</h3></div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Asset</th>
-                    <th>Employee</th>
-                    <th>Allocated By</th>
-                    <th>Allocated On</th>
-                    <th>Expected Return</th>
-                    <th>Returned On</th>
-                    <th>Condition</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {allocations.map(al => (
-                    <tr key={al.id}>
-                      <td style={{ fontWeight: 500 }}>{al.asset_name}</td>
-                      <td>{al.employee_name} <span className="text-xs text-secondary">({al.employee_emp_id})</span></td>
-                      <td className="text-secondary">{al.allocated_by_name || '—'}</td>
-                      <td>{formatDate(al.allocated_at)}</td>
-                      <td>{formatDate(al.expected_return_date)}</td>
-                      <td>{al.returned_at ? formatDate(al.returned_at) : '—'}</td>
-                      <td>{al.condition_on_return ? formatStatus(al.condition_on_return) : '—'}</td>
-                      <td>
-                        <span className={`badge ${al.returned_at ? 'badge-success' : 'badge-info'}`}>
-                          {al.returned_at ? 'Returned' : 'Active'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* By Employee Tab */}
       {tab === 'employee' && (
