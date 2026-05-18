@@ -77,10 +77,45 @@ npm run dev
 ```
 *The React user interface will open on **http://localhost:5173***.
 
----
-
 ## 🔑 Login Credentials
 
 Log in as the administrator using:
 * **Email**: `admin@techcorp.co.in`
 * **Password**: `Admin@123`
+
+---
+
+## 📷 Project Visuals & Screenshots
+
+*(Add screenshots of your locally running dashboard here to wow the judges!)*
+* **Dashboard Overview**: Highly interactive telemetry module showing asset metrics and location breakdowns.
+* **Allocations & digital signature pad**: Draw ink handovers directly on the screen to secure device custody logs.
+* **Intelligent AI Inventory Query**: Natural language conversation interface analyzing database contents.
+* **Skeuomorphic webcam QR matrix decoder**: Decode physical device tags using the high-tech webcam simulation overlay.
+
+---
+
+## 📂 Database Schema (Migrations)
+
+The project utilizes a fully normalized, relational MySQL database structure. Schema migration script files can be located in:
+* **Initial Tables Configuration**: `server/migrations/001_initial_schema.sql`
+* **Okta SSO & MDM Expansion**: `server/migrations/002_corporate_expansion.sql`
+
+---
+
+## 📝 API Collections (Postman)
+
+We have packaged a comprehensive **Postman Collection** mapping out all backend REST API flows (authentication, device query, custody handover signatures, secure JWT photo streams, and AI engines).
+* **Location**: [AIMS_Postman_Collection.json](./AIMS_Postman_Collection.json) (Import this file directly into Postman).
+
+---
+
+## 👥 Team Members & Contributions
+
+| Member | Role | Key Contributions |
+| :--- | :--- | :--- |
+| **Uchiha Sasuke** | Full-Stack Architect | Designed relational MySQL schema, auth pipelines, Express API controllers, and Vite React frontend components. |
+| **Partner Name** | Frontend & UI/UX Developer | Developed interactive webcam simulators, digital signing pads, dynamic reporting, and skeuomorphic LED badge interfaces. |
+
+*(Note: Feel free to customize this table inside the README with your actual partner names and customized contributions before submission!)*
+
