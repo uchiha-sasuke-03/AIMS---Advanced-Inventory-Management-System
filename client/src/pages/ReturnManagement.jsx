@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { RotateCcw, Check, Mail } from 'lucide-react';
+import { RotateCcw, Check, Mail, Plus, X } from 'lucide-react';
 import api from '../utils/api';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
@@ -12,8 +12,35 @@ export default function ReturnManagement() {
   const [returnForm, setReturnForm] = useState({ condition_on_return: 'good', notes: '' });
   const [triggeringReminders, setTriggeringReminders] = useState(false);
   
+  // General Add Return Modal States
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedAllocationId, setSelectedAllocationId] = useState('');
+  const [generalReturnForm, setGeneralReturnForm] = useState({ condition_on_return: 'good', notes: '' });
+  
   const toast = useToast();
   const { user } = useAuth();
+
+  const handleModalSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedAllocationId) {
+      toast.error('Please select an active allocation to return');
+      return;
+    }
+    try {
+      await api.post('/returns', {
+        allocation_id: selectedAllocationId,
+        condition_on_return: generalReturnForm.condition_on_return,
+        notes: generalReturnForm.notes
+      });
+      toast.success('Asset returned successfully!');
+      setShowAddModal(false);
+      setSelectedAllocationId('');
+      setGeneralReturnForm({ condition_on_return: 'good', notes: '' });
+      fetchActiveAllocations();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to return asset');
+    }
+  };
  
   const isOverdue = (expectedDate) => {
     if (!expectedDate) return false;
@@ -107,19 +134,29 @@ export default function ReturnManagement() {
           <p className="page-subtitle">{allocations.length} active allocation(s)</p>
         </div>
         {user?.role === 'admin' && (
-          <button 
-            className="btn btn-secondary flex items-center gap-2" 
-            onClick={handleBulkRemindOverdue}
-            disabled={triggeringReminders}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-          >
-            {triggeringReminders ? (
-              <div className="spinner" style={{ width: '14px', height: '14px', margin: 0 }} />
-            ) : (
-              <Mail size={16} />
-            )}
-            <span>Send Overdue Reminders</span>
-          </button>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button
+              className="btn btn-primary flex items-center gap-2"
+              onClick={() => setShowAddModal(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            >
+              <Plus size={16} />
+              <span>Add Return</span>
+            </button>
+            <button 
+              className="btn btn-secondary flex items-center gap-2" 
+              onClick={handleBulkRemindOverdue}
+              disabled={triggeringReminders}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            >
+              {triggeringReminders ? (
+                <div className="spinner" style={{ width: '14px', height: '14px', margin: 0 }} />
+              ) : (
+                <Mail size={16} />
+              )}
+              <span>Send Overdue Reminders</span>
+            </button>
+          </div>
         )}
       </div>
 
@@ -213,6 +250,71 @@ export default function ReturnManagement() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ADD RETURN GENERAL MODAL */}
+      {showAddModal && (
+        <div className="modal-backdrop" onClick={() => setShowAddModal(false)} style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)'
+        }}>
+          <div className="modal-content card" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px', width: '100%', padding: '1.5rem' }}>
+            <div className="flex justify-between items-center mb-4" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Process New Asset Return</h3>
+              <button className="btn-ghost" onClick={() => setShowAddModal(false)} style={{ border: 'none', background: 'none', cursor: 'pointer' }}><X size={20} /></button>
+            </div>
+            
+            <form onSubmit={handleModalSubmit}>
+              <div className="form-group mb-3" style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.875rem', marginBottom: '0.5rem' }}>Select Allocated Asset</label>
+                <select 
+                  value={selectedAllocationId} 
+                  onChange={e => setSelectedAllocationId(e.target.value)}
+                  style={{ width: '100%' }}
+                  required
+                >
+                  <option value="">-- Choose active allocation --</option>
+                  {allocations.map(al => (
+                    <option key={al.id} value={al.id}>
+                      {al.asset_name} - {al.employee_name} ({al.serial_number})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group mb-3" style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.875rem', marginBottom: '0.5rem' }}>Condition on Return</label>
+                <select 
+                  value={generalReturnForm.condition_on_return} 
+                  onChange={e => setGeneralReturnForm(p => ({ ...p, condition_on_return: e.target.value }))}
+                  style={{ width: '100%' }}
+                >
+                  <option value="good">Good</option>
+                  <option value="fair">Fair</option>
+                  <option value="poor">Poor</option>
+                  <option value="damaged">Damaged</option>
+                </select>
+              </div>
+
+              <div className="form-group mb-4" style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.875rem', marginBottom: '0.5rem' }}>Return Notes</label>
+                <input 
+                  type="text" 
+                  value={generalReturnForm.notes} 
+                  onChange={e => setGeneralReturnForm(p => ({ ...p, notes: e.target.value }))} 
+                  placeholder="Any details about the return..."
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Process Return</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

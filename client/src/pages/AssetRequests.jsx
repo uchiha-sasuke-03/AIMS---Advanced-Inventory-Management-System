@@ -162,12 +162,10 @@ export default function AssetRequests() {
           </p>
         </div>
         
-        {user?.role !== 'admin' && (
-          <button className="btn btn-primary flex items-center gap-2" onClick={() => setShowRequestModal(true)}>
-            <Plus size={18} />
-            <span>Request Asset</span>
-          </button>
-        )}
+        <button className="btn btn-primary flex items-center gap-2" onClick={() => setShowRequestModal(true)}>
+          <Plus size={18} />
+          <span>Request Asset</span>
+        </button>
       </div>
 
       {/* Filter Tabs */}

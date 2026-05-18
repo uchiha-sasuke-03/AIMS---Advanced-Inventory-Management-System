@@ -308,7 +308,8 @@ export default function Employees() {
                   <th style={{ width: '50px' }}></th>
                   <th>Employee</th>
                   <th>Contact Info</th>
-                  <th>Department & Role</th>
+                  <th>Department</th>
+                  <th>Role / Designation</th>
                   <th>Active Allocations</th>
                   <th>Joining Date</th>
                   <th style={{ width: '100px' }}>Actions</th>
@@ -364,7 +365,10 @@ export default function Employees() {
                         </td>
                         <td>
                           <div style={{ fontWeight: 500 }}>{u.department}</div>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-accent)', fontWeight: 500 }}>{u.designation || 'Associate'}</span>
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 500, color: 'var(--text-accent)' }}>{u.designation || 'Associate'}</div>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', textTransform: 'capitalize' }}>({u.role})</span>
                         </td>
                         <td>
                           <span className={`badge ${userAllocs.length > 0 ? 'badge-info' : 'badge-secondary'}`} style={{

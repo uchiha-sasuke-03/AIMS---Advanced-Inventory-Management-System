@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, Package, PlusCircle, ArrowLeftRight,
   RotateCcw, AlertTriangle, History, Users, Bot, LogOut,
-  FileQuestion, Cloud
+  FileQuestion, IndianRupee
 } from 'lucide-react';
 import './Layout.css';
 
@@ -17,7 +17,7 @@ const navItems = [
   { to: '/damage-reports', icon: AlertTriangle, label: 'Damage Log' },
   { to: '/history', icon: History, label: 'History' },
   { to: '/requests', icon: FileQuestion, label: 'Asset Requests' },
-  { to: '/saas', icon: Cloud, label: 'SaaS, PaaS, IaaS + Cloud' },
+  { to: '/finance', icon: IndianRupee, label: 'Finance' },
 ];
 
 export default function Sidebar() {

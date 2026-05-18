@@ -13,7 +13,7 @@ import DamageLog from './pages/DamageLog';
 import AllocationHistory from './pages/AllocationHistory';
 import Employees from './pages/Employees';
 import AssetRequests from './pages/AssetRequests';
-import SaaSInventory from './pages/SaaSInventory';
+import Finance from './pages/Finance';
 import AssetHistoryReport from './pages/AssetHistoryReport';
 
 function ProtectedRoute({ children }) {
@@ -44,7 +44,7 @@ function AppRoutes() {
         <Route path="/history" element={<AllocationHistory />} />
         <Route path="/employees" element={<Employees />} />
         <Route path="/requests" element={<AssetRequests />} />
-        <Route path="/saas" element={<SaaSInventory />} />
+        <Route path="/finance" element={<Finance />} />
         <Route path="/reports/asset/:id" element={<AssetHistoryReport />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
