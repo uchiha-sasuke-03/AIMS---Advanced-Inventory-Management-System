@@ -1,0 +1,375 @@
+const express = require('express');
+const router = express.Router();
+const pool = require('../config/db');
+const { auth } = require('../middleware/auth');
+const { askLlama } = require('../utils/aiAgent');
+
+// GET /api/reports/stock - Stock summary by category (derived from event tables)
+router.get('/stock', auth, async (req, res) => {
+  try {
+    const [summary] = await pool.query(`
+      SELECT 
+        ac.id as category_id,
+        ac.name as category_name,
+        COUNT(a.id) as total_assets,
+        SUM(CASE WHEN a.status = 'in_stock' THEN 1 ELSE 0 END) as in_stock,
+        SUM(CASE WHEN a.status = 'allocated' THEN 1 ELSE 0 END) as allocated,
+        SUM(CASE WHEN a.status = 'damaged' THEN 1 ELSE 0 END) as damaged,
+        SUM(CASE WHEN a.status = 'retired' THEN 1 ELSE 0 END) as retired,
+        SUM(a.price) as total_value
+      FROM asset_categories ac
+      LEFT JOIN assets a ON ac.id = a.category_id
+      GROUP BY ac.id, ac.name
+      ORDER BY ac.name
+    `);
+
+    // Low stock warnings (categories with less than 3 in_stock items)
+    const lowStock = summary.filter(s => s.in_stock < 3);
+
+    // Overall stats
+    const [overallStats] = await pool.query(`
+      SELECT 
+        COUNT(*) as total_assets,
+        SUM(CASE WHEN status = 'in_stock' THEN 1 ELSE 0 END) as in_stock,
+        SUM(CASE WHEN status = 'allocated' THEN 1 ELSE 0 END) as allocated,
+        SUM(CASE WHEN status = 'damaged' THEN 1 ELSE 0 END) as damaged,
+        SUM(CASE WHEN status = 'retired' THEN 1 ELSE 0 END) as retired,
+        SUM(price) as total_value
+      FROM assets
+    `);
+
+    // Fetch active assets details to calculate overall depreciated Book Value (WDV)
+    const [allAssets] = await pool.query(`
+      SELECT a.price, a.purchase_date, ac.name as category_name
+      FROM assets a
+      LEFT JOIN asset_categories ac ON a.category_id = ac.id
+      WHERE a.status != 'retired'
+    `);
+
+    let totalBookValue = 0;
+    let eolCount = 0;
+    let approachingEolCount = 0;
+
+    allAssets.forEach(asset => {
+      const price = parseFloat(asset.price);
+      if (!price) return;
+      
+      const purchaseDate = new Date(asset.purchase_date);
+      const currentDate = new Date();
+      if (isNaN(purchaseDate.getTime()) || purchaseDate > currentDate) {
+        totalBookValue += price;
+        return;
+      }
+
+      const msDiff = currentDate - purchaseDate;
+      const yearsElapsed = msDiff / (1000 * 60 * 60 * 24 * 365.25);
+      const monthsElapsed = yearsElapsed * 12;
+
+      if (monthsElapsed >= 36) {
+        eolCount += 1;
+      } else if (monthsElapsed >= 30) {
+        approachingEolCount += 1;
+      }
+
+      const cat = (asset.category_name || '').toLowerCase();
+      let rate = 0.15; // default standard rate (15%) for equipment/monitors/phones
+      if (cat.includes('laptop') || cat.includes('computer') || cat.includes('software')) {
+        rate = 0.40; // 40% for laptops/computers
+      } else if (cat.includes('furniture')) {
+        rate = 0.10; // 10% for furniture
+      }
+
+      // WDV formula
+      let bookValue = price * Math.pow(1 - rate, yearsElapsed);
+
+      // 5% scrap floor
+      const scrapFloor = price * 0.05;
+      if (bookValue < scrapFloor) {
+        bookValue = scrapFloor;
+      }
+
+      totalBookValue += bookValue;
+    });
+
+    const overall = overallStats[0];
+    overall.total_book_value = totalBookValue;
+    overall.eol_count = eolCount;
+    overall.approaching_eol_count = approachingEolCount;
+
+    // Calculate ESG Carbon Footprint Metrics
+    let totalCarbonDebt = 0;
+    allAssets.forEach(asset => {
+      const cat = (asset.category_name || '').toLowerCase();
+      if (cat.includes('laptop') || cat.includes('computer')) {
+        totalCarbonDebt += 350; // 350kg CO2 per laptop
+      } else if (cat.includes('monitor') || cat.includes('screen')) {
+        totalCarbonDebt += 150; // 150kg CO2 per monitor
+      } else if (cat.includes('phone') || cat.includes('mobile')) {
+        totalCarbonDebt += 80;  // 80kg CO2 per phone
+      } else {
+        totalCarbonDebt += 15;  // 15kg CO2 per accessory
+      }
+    });
+
+    const treesOffset = Math.round(totalCarbonDebt / 22); // A tree absorbs ~22kg CO2/year
+    const activeCount = overall.total_assets - overall.retired;
+    const ewasteRate = overall.total_assets > 0 
+      ? Math.round((activeCount / overall.total_assets) * 100)
+      : 100;
+
+    // Calculate CapEx Procurement Forecast
+    let capexReplacementsBudget = 0;
+    let capexReplacementsCount = 0;
+
+    // 1. Cost of EOL assets needing replacement
+    allAssets.forEach(asset => {
+      const price = parseFloat(asset.price);
+      if (!price) return;
+      
+      const purchaseDate = new Date(asset.purchase_date);
+      const currentDate = new Date();
+      if (!isNaN(purchaseDate.getTime()) && purchaseDate <= currentDate) {
+        const msDiff = currentDate - purchaseDate;
+        const yearsElapsed = msDiff / (1000 * 60 * 60 * 24 * 365.25);
+        const monthsElapsed = yearsElapsed * 12;
+        if (monthsElapsed >= 36) {
+          capexReplacementsBudget += price;
+          capexReplacementsCount += 1;
+        }
+      }
+    });
+
+    // 2. Cost of replenishing low-stock categories to safety stock of 3 units
+    summary.forEach(cat => {
+      if (cat.in_stock < 3) {
+        const needed = 3 - cat.in_stock;
+        const avgPrice = cat.total_assets > 0 ? (cat.total_value / cat.total_assets) : 50000;
+        capexReplacementsBudget += (needed * avgPrice);
+        capexReplacementsCount += needed;
+      }
+    });
+
+    // 3. Fast Static CFO Justification Fallback (AI generated asynchronously on front-end)
+    const justificationText = `Requesting procurement budget of ₹${Math.round(capexReplacementsBudget).toLocaleString('en-IN')} for next quarter to replace ${eolCount} EOL hardware units and replenish low safety stock levels across Noida and Bengaluru campuses, ensuring development productivity remains unhindered.`;
+
+    // Recent allocations
+    const [recentAllocations] = await pool.query(`
+      SELECT al.*, a.name as asset_name, u.name as employee_name
+      FROM allocations al
+      LEFT JOIN assets a ON al.asset_id = a.id
+      LEFT JOIN users u ON al.user_id = u.id
+      ORDER BY al.allocated_at DESC
+      LIMIT 5
+    `);
+
+    // Location breakdown
+    const [locationBreakdown] = await pool.query(`
+      SELECT 
+        location,
+        COUNT(*) as count,
+        SUM(CASE WHEN status = 'in_stock' THEN 1 ELSE 0 END) as in_stock
+      FROM assets
+      WHERE location IS NOT NULL
+      GROUP BY location
+      ORDER BY count DESC
+    `);
+
+    res.json({
+      summary,
+      overall,
+      lowStockWarnings: lowStock,
+      recentAllocations,
+      locationBreakdown,
+      esg: {
+        total_carbon_debt: totalCarbonDebt,
+        trees_offset_needed: treesOffset,
+        ewaste_avoidance_rate: ewasteRate
+      },
+      capex: {
+        replacements_budget: Math.round(capexReplacementsBudget),
+        replacements_count: capexReplacementsCount,
+        ai_justification: justificationText
+      }
+    });
+  } catch (error) {
+    console.error('Stock report error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/reports/employee/:id - All allocations for an employee
+router.get('/employee/:id', auth, async (req, res) => {
+  try {
+    const [user] = await pool.query('SELECT id, emp_id, name, email, department FROM users WHERE id = ?', [req.params.id]);
+    if (user.length === 0) {
+      return res.status(404).json({ error: 'Employee not found' });
+    }
+
+    const [allocations] = await pool.query(`
+      SELECT al.*, 
+        a.name as asset_name, a.serial_number, a.model, ac.name as category_name,
+        ab.name as allocated_by_name
+      FROM allocations al
+      LEFT JOIN assets a ON al.asset_id = a.id
+      LEFT JOIN asset_categories ac ON a.category_id = ac.id
+      LEFT JOIN users ab ON al.allocated_by = ab.id
+      WHERE al.user_id = ?
+      ORDER BY al.allocated_at DESC
+    `, [req.params.id]);
+
+    const [damageReports] = await pool.query(`
+      SELECT dr.*, a.name as asset_name
+      FROM damage_reports dr
+      LEFT JOIN assets a ON dr.asset_id = a.id
+      WHERE dr.reported_by = ?
+      ORDER BY dr.reported_at DESC
+    `, [req.params.id]);
+
+    res.json({
+      employee: user[0],
+      allocations,
+      damageReports,
+      stats: {
+        totalAllocations: allocations.length,
+        activeAllocations: allocations.filter(a => !a.returned_at).length,
+        returnedAllocations: allocations.filter(a => a.returned_at).length
+      }
+    });
+  } catch (error) {
+    console.error('Employee report error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/reports/asset/:id - Full lifecycle history for an asset
+router.get('/asset/:id', auth, async (req, res) => {
+  try {
+    const [asset] = await pool.query(`
+      SELECT a.*, ac.name as category_name 
+      FROM assets a 
+      LEFT JOIN asset_categories ac ON a.category_id = ac.id 
+      WHERE a.id = ?
+    `, [req.params.id]);
+
+    if (asset.length === 0) {
+      return res.status(404).json({ error: 'Asset not found' });
+    }
+
+    const [allocations] = await pool.query(`
+      SELECT al.*, 
+        u.name as employee_name, u.emp_id as employee_emp_id,
+        ab.name as allocated_by_name
+      FROM allocations al
+      LEFT JOIN users u ON al.user_id = u.id
+      LEFT JOIN users ab ON al.allocated_by = ab.id
+      WHERE al.asset_id = ?
+      ORDER BY al.allocated_at DESC
+    `, [req.params.id]);
+
+    const [damageReports] = await pool.query(`
+      SELECT dr.*, u.name as reported_by_name
+      FROM damage_reports dr
+      LEFT JOIN users u ON dr.reported_by = u.id
+      WHERE dr.asset_id = ?
+      ORDER BY dr.reported_at DESC
+    `, [req.params.id]);
+
+    res.json({
+      asset: asset[0],
+      allocations,
+      damageReports,
+      timeline: [
+        ...allocations.map(a => ({
+          type: a.returned_at ? 'return' : 'allocation',
+          date: a.returned_at || a.allocated_at,
+          details: a
+        })),
+        ...damageReports.map(d => ({
+          type: 'damage',
+          date: d.reported_at,
+          details: d
+        }))
+      ].sort((a, b) => new Date(b.date) - new Date(a.date))
+    });
+  } catch (error) {
+    console.error('Asset report error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/reports/capex-justification - Async Llama budget justification generator
+router.get('/capex-justification', auth, async (req, res) => {
+  try {
+    const [summary] = await pool.query(`
+      SELECT 
+        ac.id as category_id,
+        ac.name as category_name,
+        COUNT(a.id) as total_assets,
+        SUM(CASE WHEN a.status = 'in_stock' THEN 1 ELSE 0 END) as in_stock,
+        SUM(CASE WHEN a.status = 'allocated' THEN 1 ELSE 0 END) as allocated,
+        SUM(CASE WHEN a.status = 'damaged' THEN 1 ELSE 0 END) as damaged,
+        SUM(CASE WHEN a.status = 'retired' THEN 1 ELSE 0 END) as retired,
+        SUM(a.price) as total_value
+      FROM asset_categories ac
+      LEFT JOIN assets a ON ac.id = a.category_id
+      GROUP BY ac.id, ac.name
+      ORDER BY ac.name
+    `);
+
+    const [allAssets] = await pool.query(`
+      SELECT a.price, a.purchase_date, ac.name as category_name
+      FROM assets a
+      LEFT JOIN asset_categories ac ON a.category_id = ac.id
+      WHERE a.status != 'retired'
+    `);
+
+    let capexReplacementsBudget = 0;
+    let capexReplacementsCount = 0;
+    let eolCount = 0;
+
+    allAssets.forEach(asset => {
+      const price = parseFloat(asset.price);
+      if (!price) return;
+      
+      const purchaseDate = new Date(asset.purchase_date);
+      const currentDate = new Date();
+      if (!isNaN(purchaseDate.getTime()) && purchaseDate <= currentDate) {
+        const msDiff = currentDate - purchaseDate;
+        const yearsElapsed = msDiff / (1000 * 60 * 60 * 24 * 365.25);
+        const monthsElapsed = yearsElapsed * 12;
+        if (monthsElapsed >= 36) {
+          capexReplacementsBudget += price;
+          capexReplacementsCount += 1;
+          eolCount += 1;
+        }
+      }
+    });
+
+    summary.forEach(cat => {
+      if (cat.in_stock < 3) {
+        const needed = 3 - cat.in_stock;
+        const avgPrice = cat.total_assets > 0 ? (cat.total_value / cat.total_assets) : 50000;
+        capexReplacementsBudget += (needed * avgPrice);
+        capexReplacementsCount += needed;
+      }
+    });
+
+    let justificationText = `Requesting procurement budget of ₹${Math.round(capexReplacementsBudget).toLocaleString('en-IN')} for next quarter to replace EOL hardware and replenish low safety stock levels across Noida and Bengaluru campuses, ensuring development productivity remains unhindered.`;
+    if (capexReplacementsBudget > 0) {
+      try {
+        const prompt = `Draft a concise, compelling 1-paragraph justification email to the CFO requesting next quarter's IT procurement budget of ₹${Math.round(capexReplacementsBudget).toLocaleString('en-IN')}. The budget is calculated automatically to replace ${eolCount} EOL devices (older than 3 years) and restock ${capexReplacementsCount - eolCount} low-stock inventory units. Emphasize avoiding dev workflow downtime and compliance offsets. Keep it under 110 words, extremely professional and direct. Do not include subject lines, greetings, or sign-offs.`;
+        const systemPrompt = `You are a strategic corporate Chief Technology Officer (CTO) requesting quarterly budget approval. Write direct, persuasive, mathematically clear text.`;
+        justificationText = await askLlama(prompt, systemPrompt);
+      } catch (err) {
+        console.error("AI Budget Justification failed:", err);
+      }
+    }
+
+    res.json({ justification: justificationText });
+  } catch (error) {
+    console.error('AI Justification error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+module.exports = router;
