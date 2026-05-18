@@ -18,15 +18,25 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [aiJustification, setAiJustification] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
+  const [lastSynced, setLastSynced] = useState(new Date().toLocaleTimeString());
+  const [pulse, setPulse] = useState(false);
 
   useEffect(() => {
     fetchDashboard();
+    
+    // Auto-polling interval every 5 seconds for absolute real-time dashboard sync
+    const interval = setInterval(() => {
+      fetchDashboardSilent();
+    }, 5000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const fetchDashboard = async () => {
     try {
       const res = await api.get('/reports/stock');
       setData(res.data);
+      setLastSynced(new Date().toLocaleTimeString());
       if (res.data?.capex?.ai_justification) {
         setAiJustification(res.data.capex.ai_justification);
       }
@@ -35,6 +45,18 @@ export default function Dashboard() {
       console.error('Dashboard fetch error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDashboardSilent = async () => {
+    try {
+      const res = await api.get('/reports/stock');
+      setData(res.data);
+      setLastSynced(new Date().toLocaleTimeString());
+      setPulse(true);
+      setTimeout(() => setPulse(false), 800);
+    } catch (err) {
+      console.error('Dashboard silent refresh error:', err);
     }
   };
 
@@ -180,10 +202,41 @@ export default function Dashboard() {
 
   return (
     <div className="animate-fade-in" style={{ padding: '0 0.5rem' }}>
-      <div className="page-header">
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h1 className="page-title">Dashboard</h1>
           <p className="page-subtitle">Unified corporate asset health & audit compliance overview</p>
+        </div>
+        
+        {/* Real-time Indicator Badge */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.625rem',
+          padding: '0.5rem 0.85rem',
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border-primary)',
+          borderRadius: '30px',
+          boxShadow: 'var(--shadow-sm)',
+          transition: 'all 0.3s ease',
+          transform: pulse ? 'scale(1.03)' : 'scale(1)',
+          borderColor: pulse ? 'var(--status-success)' : 'var(--border-primary)'
+        }}>
+          <span style={{
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            background: 'var(--status-success)',
+            boxShadow: '0 0 10px #10B981',
+            display: 'inline-block',
+            animation: 'pulse 1.5s infinite'
+          }} />
+          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+            Real-Time Sync Active
+          </span>
+          <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', borderLeft: '1px solid var(--border-primary)', paddingLeft: '0.5rem' }}>
+            Last sync: {lastSynced}
+          </span>
         </div>
       </div>
 
@@ -897,6 +950,20 @@ export default function Dashboard() {
           font-size: 0.75rem;
           color: var(--text-secondary);
           margin-top: 0.25rem;
+        }
+        @keyframes pulse {
+          0% {
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            transform: scale(0.95);
+          }
+          70% {
+            box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+            transform: scale(1.05);
+          }
+          100% {
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            transform: scale(0.95);
+          }
         }
         @keyframes strokeAnim {
           from {
