@@ -13,6 +13,17 @@ const categoryIcons = {
   'Accessories': Mouse,
 };
 
+function getRelativeTimeString(date) {
+  const seconds = Math.floor((new Date() - date) / 1000);
+  if (seconds < 5) return 'Just now';
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return date.toLocaleDateString();
+}
+
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -87,7 +98,7 @@ export default function Dashboard() {
 
   if (!data) return <div className="empty-state"><h3>Failed to load dashboard</h3></div>;
 
-  const { summary, overall, lowStockWarnings, recentAllocations, locationBreakdown } = data;
+  const { summary, overall, lowStockWarnings, recentAllocations, locationBreakdown, liveActivity } = data;
  
   const totalCategoryAssets = summary ? summary.reduce((sum, c) => sum + c.total_assets, 0) : 0;
   const colors = ['#38BDF8', '#10B981', '#F59E0B', '#A855F7'];
@@ -280,109 +291,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* 1. Animated Line Graph for EOL Procurement */}
-      <div className="card mb-3" style={{ background: 'var(--bg-glass)', border: '1px solid var(--border-primary)', padding: '1.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-primary)', paddingBottom: '0.75rem' }}>
-          <div>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>4-Quarter EOL Smart Procurement Projections</h3>
-            <p className="text-xs text-secondary" style={{ marginTop: '0.25rem' }}>Expected corporate lifecycle replacement costs for laptops, monitors, and devices hitting EOL status.</p>
-          </div>
-          <span className="badge badge-purple" style={{ background: 'rgba(168, 85, 247, 0.1)', color: '#A855F7', fontWeight: 600 }}>Smart Hardware Refreshes</span>
-        </div>
-
-        <div style={{ position: 'relative', width: '100%', height: '180px', marginTop: '1.5rem' }}>
-          <svg viewBox="0 0 500 130" width="100%" height="100%" preserveAspectRatio="none" style={{ overflow: 'visible' }}>
-            <defs>
-              <linearGradient id="eolAreaGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.25" />
-                <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.0" />
-              </linearGradient>
-              <linearGradient id="eolLineGradient" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#a855f7" />
-                <stop offset="50%" stopColor="#6366f1" />
-                <stop offset="100%" stopColor="#ec4899" />
-              </linearGradient>
-            </defs>
-
-            {/* Grid Lines */}
-            <line x1="0" y1="15" x2="500" y2="15" stroke="var(--border-primary)" strokeDasharray="3 3" strokeWidth="0.75" />
-            <line x1="0" y1="55" x2="500" y2="55" stroke="var(--border-primary)" strokeDasharray="3 3" strokeWidth="0.75" />
-            <line x1="0" y1="95" x2="500" y2="95" stroke="var(--border-primary)" strokeDasharray="3 3" strokeWidth="0.75" />
-            <line x1="0" y1="130" x2="500" y2="130" stroke="var(--border-primary)" strokeWidth="1" />
-
-            {/* Area under the line */}
-            <path
-              d="M 50 130 L 50 85 L 175 45 L 300 100 L 425 20 L 425 130 Z"
-              fill="url(#eolAreaGradient)"
-              style={{ animation: 'fadeIn 1.2s ease forwards' }}
-            />
-
-            {/* Line Path */}
-            <path
-              d="M 50 85 L 175 45 L 300 100 L 425 20"
-              fill="none"
-              stroke="url(#eolLineGradient)"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{
-                strokeDasharray: '800',
-                strokeDashoffset: '800',
-                animation: 'drawPath 2s cubic-bezier(0.16, 1, 0.3, 1) forwards'
-              }}
-            />
-
-            {/* Interactive Markers */}
-            {[
-              { x: 50, y: 85, spend: 850000, label: 'Q3 2026', count: 9 },
-              { x: 175, y: 45, spend: 1450000, label: 'Q4 2026', count: 15 },
-              { x: 300, y: 100, spend: 620000, label: 'Q1 2027', count: 6 },
-              { x: 425, y: 20, spend: 1950000, label: 'Q2 2027', count: 21 }
-            ].map((pt, idx) => (
-              <g key={idx} style={{ cursor: 'pointer' }} className="chart-marker-group">
-                <circle
-                  cx={pt.x}
-                  cy={pt.y}
-                  r="6"
-                  fill="var(--bg-card)"
-                  stroke="#a855f7"
-                  strokeWidth="3"
-                />
-                <circle
-                  cx={pt.x}
-                  cy={pt.y}
-                  r="12"
-                  fill="#a855f7"
-                  fillOpacity="0"
-                  className="pulsing-hover"
-                />
-                {/* Embedded Labels on graph */}
-                <text
-                  x={pt.x}
-                  y={pt.y - 14}
-                  textAnchor="middle"
-                  fill="var(--text-primary)"
-                  fontSize="9.5"
-                  fontWeight="700"
-                  fontFamily="inherit"
-                >
-                  {formatINR(pt.spend)}
-                </text>
-              </g>
-            ))}
-          </svg>
-          
-          {/* Bottom Labels */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem 2.5rem 0 2.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-            <span style={{ textAlign: 'center' }}><strong>Q3 2026</strong><br/><small style={{ color: 'var(--text-tertiary)' }}>9 units</small></span>
-            <span style={{ textAlign: 'center' }}><strong>Q4 2026</strong><br/><small style={{ color: 'var(--text-tertiary)' }}>15 units</small></span>
-            <span style={{ textAlign: 'center' }}><strong>Q1 2027</strong><br/><small style={{ color: 'var(--text-tertiary)' }}>6 units</small></span>
-            <span style={{ textAlign: 'center' }}><strong>Q2 2027</strong><br/><small style={{ color: 'var(--text-tertiary)' }}>21 units</small></span>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid-2 mb-3" style={{ gridTemplateColumns: '1.2fr 1fr', gap: '1.25rem' }}>
+<div className="grid-2 mb-3" style={{ gridTemplateColumns: '1.2fr 1fr', gap: '1.25rem' }}>
         {/* 2. Stock by Category Pie/Donut Chart */}
         <div className="card" style={{ background: 'var(--bg-glass)', border: '1px solid var(--border-primary)' }}>
           <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -614,88 +523,92 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* 4. Glowing SVG Line Graph for Activity Velocity */}
+      {/* Live Audited Operations Telemetry Card */}
       <div className="card mb-3 animate-fade-in" style={{ background: 'var(--bg-glass)', border: '1px solid var(--border-primary)', padding: '1.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>Allocation Velocity & Activity Trends (6-Month Flow)</h3>
-          <span className="badge badge-info" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontWeight: 600 }}>
-            <TrendingUp size={10} /> Vector Grid Audited
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-primary)', paddingBottom: '0.75rem' }}>
+          <div>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Live Audited Operations Telemetry</h3>
+            <p className="text-xs text-secondary" style={{ marginTop: '0.25rem' }}>Real-time streaming ledger of database transactions, physical QR scanner logs, and device triages.</p>
+          </div>
+          <span className="badge badge-purple" style={{ background: 'rgba(168, 85, 247, 0.1)', color: '#A855F7', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#A855F7', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
+            Active Real-time Feed
           </span>
         </div>
-        <div style={{ position: 'relative' }}>
-          <p className="text-xs text-secondary mb-4">Chronological flow tracking handover cycles, physical audits, and device operations:</p>
-          <div style={{ position: 'relative', width: '100%', height: '160px', marginTop: '1rem' }}>
-            <svg viewBox="0 0 500 120" width="100%" height="100%" preserveAspectRatio="none" style={{ overflow: 'visible' }}>
-              <defs>
-                <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--accent-primary)" stopOpacity="0.25" />
-                  <stop offset="100%" stopColor="var(--accent-primary)" stopOpacity="0.0" />
-                </linearGradient>
-                <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#3b82f6" />
-                  <stop offset="50%" stopColor="#6366f1" />
-                  <stop offset="100%" stopColor="#2563eb" />
-                </linearGradient>
-              </defs>
-              {/* Horizontal Grid lines */}
-              <line x1="0" y1="20" x2="500" y2="20" stroke="var(--bg-tertiary)" strokeDasharray="4 4" strokeWidth="0.75" />
-              <line x1="0" y1="60" x2="500" y2="60" stroke="var(--bg-tertiary)" strokeDasharray="4 4" strokeWidth="0.75" />
-              <line x1="0" y1="100" x2="500" y2="100" stroke="var(--bg-tertiary)" strokeDasharray="4 4" strokeWidth="0.75" />
 
-              {/* Area path */}
-              <path
-                d="M 0 120 Q 50 80, 100 95 T 200 45 T 300 55 T 400 25 T 500 10 L 500 120 Z"
-                fill="url(#areaGradient)"
-                style={{
-                  animation: 'fadeIn 1s ease forwards'
-                }}
-              />
-
-              {/* Line path */}
-              <path
-                d="M 0 120 Q 50 80, 100 95 T 200 45 T 300 55 T 400 25 T 500 10"
-                fill="none"
-                stroke="url(#lineGradient)"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                style={{
-                  strokeDasharray: '1000',
-                  strokeDashoffset: '1000',
-                  animation: 'drawPath 2s cubic-bezier(0.16, 1, 0.3, 1) forwards'
-                }}
-              />
-
-              {/* Interactive nodes */}
-              {[
-                { x: 0, y: 120, val: 0 },
-                { x: 100, y: 95, val: 5 },
-                { x: 200, y: 45, val: 14 },
-                { x: 300, y: 55, val: 12 },
-                { x: 400, y: 25, val: 24 },
-                { x: 500, y: 10, val: 32 }
-              ].map((pt, i) => (
-                <g key={i}>
-                  <circle
-                    cx={pt.x}
-                    cy={pt.y}
-                    r="4"
-                    fill="var(--bg-card)"
-                    stroke="var(--accent-primary)"
-                    strokeWidth="2"
-                  />
-                </g>
-              ))}
-            </svg>
-            {/* Axis labels */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0 0 0', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-              <span>Nov 2025</span>
-              <span>Dec 2025</span>
-              <span>Jan 2026</span>
-              <span>Feb 2026</span>
-              <span>Mar 2026</span>
-              <span>Apr 2026</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '320px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+          {(!liveActivity || liveActivity.length === 0) ? (
+            <div className="text-center py-4 text-secondary text-sm">
+              No recent activity log recorded in this database cycle.
             </div>
-          </div>
+          ) : (
+            liveActivity.map((activity, idx) => {
+              const dateObj = new Date(activity.event_time);
+              const relativeTime = getRelativeTimeString(dateObj);
+              
+              // Custom colors based on activity types
+              const typeConfig = {
+                'allocation': { color: 'var(--accent-primary)', label: 'ALLOCATION', icon: ArrowRightLeft },
+                'return': { color: 'var(--status-success)', label: 'RETURN', icon: CornerDownLeft },
+                'damage': { color: 'var(--status-danger)', label: 'DAMAGE REPORT', icon: AlertOctagon },
+                'scan': { color: '#A855F7', label: 'QR SCAN', icon: MapPin }
+              };
+              const config = typeConfig[activity.type] || { color: 'var(--text-secondary)', label: 'EVENT', icon: CheckSquare };
+              const IconComponent = config.icon;
+              
+              return (
+                <div 
+                  key={idx} 
+                  className="activity-row"
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-primary)',
+                    padding: '0.75rem 1rem',
+                    borderRadius: '8px',
+                    gap: '1rem',
+                    animation: 'slideIn 0.3s ease forwards',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div style={{ 
+                      width: '32px', 
+                      height: '32px', 
+                      borderRadius: '8px', 
+                      background: `rgba(${activity.type === 'allocation' ? '59, 130, 246' : activity.type === 'return' ? '16, 185, 129' : activity.type === 'damage' ? '239, 68, 68' : '168, 85, 247'}, 0.12)`, 
+                      color: config.color,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <IconComponent size={15} />
+                    </div>
+                    <div>
+                      <span className="badge" style={{ fontSize: '0.6rem', fontWeight: 700, background: 'var(--bg-secondary)', color: config.color, border: `1px solid ${config.color}33`, padding: '0.15rem 0.4rem', borderRadius: '4px', verticalAlign: 'middle', marginRight: '0.5rem' }}>
+                        {config.label}
+                      </span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                        {activity.detail}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <span style={{ fontSize: '0.725rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                      {relativeTime}
+                    </span>
+                    <small style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', display: 'block', marginTop: '1px' }}>
+                      {dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </small>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 

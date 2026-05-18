@@ -248,6 +248,51 @@ router.get('/stock', auth, async (req, res) => {
       saasBreakdown = saasRows;
     } catch (err) {
       console.warn('Error fetching saas breakdown for dashboard:', err.message);
+    }    // 5. Fetch Unified Live Activities (Real-Time Platform Event Feed)
+    let liveActivity = [];
+    try {
+      const [allocs] = await pool.query(`
+        SELECT al.id, al.allocated_at as event_time, 'allocation' as type, u.name as employee_name, a.name as asset_name 
+        FROM allocations al 
+        JOIN users u ON al.user_id = u.id 
+        JOIN assets a ON al.asset_id = a.id 
+        ORDER BY al.allocated_at DESC LIMIT 6
+      `);
+      
+      const [returns] = await pool.query(`
+        SELECT al.id, al.returned_at as event_time, 'return' as type, u.name as employee_name, a.name as asset_name 
+        FROM allocations al 
+        JOIN users u ON al.user_id = u.id 
+        JOIN assets a ON al.asset_id = a.id 
+        WHERE al.returned_at IS NOT NULL 
+        ORDER BY al.returned_at DESC LIMIT 6
+      `);
+
+      const [damages] = await pool.query(`
+        SELECT dr.id, dr.reported_at as event_time, 'damage' as type, u.name as employee_name, a.name as asset_name, dr.severity 
+        FROM damage_reports dr 
+        LEFT JOIN users u ON dr.reported_by = u.id 
+        JOIN assets a ON dr.asset_id = a.id 
+        ORDER BY dr.reported_at DESC LIMIT 6
+      `);
+
+      const [scans] = await pool.query(`
+        SELECT sl.id, sl.scanned_at as event_time, 'scan' as type, u.name as employee_name, a.name as asset_name 
+        FROM scan_logs sl 
+        LEFT JOIN users u ON sl.scanned_by = u.id 
+        JOIN assets a ON sl.asset_id = a.id 
+        ORDER BY sl.scanned_at DESC LIMIT 6
+      `);
+
+      // Merge and sort
+      liveActivity = [
+        ...allocs.map(e => ({ ...e, detail: `Handed over ${e.asset_name} to ${e.employee_name}` })),
+        ...returns.map(e => ({ ...e, detail: `Returned ${e.asset_name} from ${e.employee_name}` })),
+        ...damages.map(e => ({ ...e, detail: `Reported [${e.severity}] damage for ${e.asset_name}` })),
+        ...scans.map(e => ({ ...e, detail: `${e.employee_name || 'System Auditor'} scanned QR code of ${e.asset_name}` }))
+      ].sort((a, b) => new Date(b.event_time) - new Date(a.event_time)).slice(0, 10);
+    } catch (err) {
+      console.warn('Error compiling live activities for dashboard:', err.message);
     }
 
     res.json({
@@ -256,6 +301,7 @@ router.get('/stock', auth, async (req, res) => {
       lowStockWarnings: lowStock,
       recentAllocations,
       locationBreakdown,
+      liveActivity,
       requestsBreakdown,
       returnsBreakdown,
       damageSeverityBreakdown,
