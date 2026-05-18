@@ -252,7 +252,8 @@ export default function AssetList() {
   };
 
   return (
-    <div className="animate-fade-in">
+    <>
+      <div className="animate-fade-in">
       <div className="page-header">
         <div>
           <h1 className="page-title">Asset Inventory</h1>
@@ -506,6 +507,8 @@ export default function AssetList() {
           </div>
         </div>
       )}
+      </div>
+
       {/* QR Asset Tag Modal */}
       {activeQrAsset && (
         <div style={{
@@ -958,6 +961,6 @@ export default function AssetList() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

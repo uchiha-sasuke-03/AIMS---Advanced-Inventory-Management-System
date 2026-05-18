@@ -191,7 +191,8 @@ export default function Employees() {
   const departments = [...new Set(users.map(u => u.department))].filter(Boolean);
 
   return (
-    <div className="animate-fade-in">
+    <>
+      <div className="animate-fade-in">
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 className="page-title">Employees Directory</h1>
@@ -475,6 +476,7 @@ export default function Employees() {
           </div>
         </div>
       )}
+      </div>
 
       {/* Add Employee Modal */}
       {showAddModal && (
@@ -711,6 +713,6 @@ export default function Employees() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
