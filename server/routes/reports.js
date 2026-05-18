@@ -209,12 +209,57 @@ router.get('/stock', auth, async (req, res) => {
       ORDER BY count DESC
     `);
 
+    // 1. Fetch requests breakdown
+    let requestsBreakdown = [];
+    try {
+      const [reqRows] = await pool.query('SELECT status, COUNT(*) as count FROM requests GROUP BY status');
+      requestsBreakdown = reqRows;
+    } catch (err) {
+      console.warn('Error fetching requests breakdown for dashboard:', err.message);
+    }
+
+    // 2. Fetch returns breakdown
+    let returnsBreakdown = [];
+    try {
+      const [retRows] = await pool.query(`
+        SELECT COALESCE(condition_on_return, 'good') as condition_on_return, COUNT(*) as count 
+        FROM allocations 
+        WHERE returned_at IS NOT NULL 
+        GROUP BY condition_on_return
+      `);
+      returnsBreakdown = retRows;
+    } catch (err) {
+      console.warn('Error fetching returns breakdown for dashboard:', err.message);
+    }
+
+    // 3. Fetch damage severity breakdown
+    let damageSeverityBreakdown = [];
+    try {
+      const [dmgRows] = await pool.query('SELECT severity, COUNT(*) as count FROM damage_reports GROUP BY severity');
+      damageSeverityBreakdown = dmgRows;
+    } catch (err) {
+      console.warn('Error fetching damage breakdown for dashboard:', err.message);
+    }
+
+    // 4. Fetch SaaS / Cloud subscriptions breakdown
+    let saasBreakdown = [];
+    try {
+      const [saasRows] = await pool.query('SELECT category, COUNT(*) as count, SUM(cost_per_seat) as total_cost FROM saas_licenses GROUP BY category');
+      saasBreakdown = saasRows;
+    } catch (err) {
+      console.warn('Error fetching saas breakdown for dashboard:', err.message);
+    }
+
     res.json({
       summary,
       overall,
       lowStockWarnings: lowStock,
       recentAllocations,
       locationBreakdown,
+      requestsBreakdown,
+      returnsBreakdown,
+      damageSeverityBreakdown,
+      saasBreakdown,
       esg: {
         total_carbon_debt: totalCarbonDebt,
         trees_offset_needed: treesOffset,

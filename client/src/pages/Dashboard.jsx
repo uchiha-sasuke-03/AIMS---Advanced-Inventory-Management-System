@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Package, Monitor, Smartphone, Mouse, AlertTriangle, TrendingUp, MapPin, ArrowRightLeft } from 'lucide-react';
+import { 
+  Package, Monitor, Smartphone, Mouse, AlertTriangle, TrendingUp, MapPin, 
+  ArrowRightLeft, CheckSquare, CornerDownLeft, DollarSign, AlertOctagon 
+} from 'lucide-react';
 import api from '../utils/api';
 import { formatINR, formatDate, formatStatus, getStatusBadge } from '../utils/formatters';
 
@@ -99,6 +102,81 @@ export default function Dashboard() {
       color: locationColors[idx % locationColors.length]
     };
   }) : [];
+
+  // 1. Asset Requests Segment Calculations
+  const requestsBreakdown = data.requestsBreakdown || [];
+  const totalRequests = requestsBreakdown.reduce((sum, r) => sum + r.count, 0);
+  const requestColors = {
+    'approved': '#10B981',
+    'pending': '#F59E0B',
+    'declined': '#EF4444',
+    'rejected': '#EF4444'
+  };
+  
+  let reqAccumulator = 0;
+  const requestSegments = requestsBreakdown.map((req) => {
+    const percentage = totalRequests > 0 ? (req.count / totalRequests) : 0;
+    const strokeLength = percentage * 251.2;
+    const strokeOffset = 251.2 - strokeLength + reqAccumulator;
+    reqAccumulator -= strokeLength;
+    return {
+      ...req,
+      percentage: Math.round(percentage * 100),
+      strokeLength,
+      strokeOffset,
+      color: requestColors[req.status.toLowerCase()] || '#A855F7'
+    };
+  });
+
+  // 2. Returns Condition Segment Calculations
+  const returnsBreakdown = data.returnsBreakdown || [];
+  const totalReturns = returnsBreakdown.reduce((sum, r) => sum + r.count, 0);
+  const returnColors = {
+    'good': '#10B981',
+    'damaged': '#EF4444',
+    'needs_repair': '#3b82f6',
+    'repair': '#3b82f6'
+  };
+  
+  let retAccumulator = 0;
+  const returnSegments = returnsBreakdown.map((ret) => {
+    const percentage = totalReturns > 0 ? (ret.count / totalReturns) : 0;
+    const strokeLength = percentage * 251.2;
+    const strokeOffset = 251.2 - strokeLength + retAccumulator;
+    retAccumulator -= strokeLength;
+    return {
+      ...ret,
+      percentage: Math.round(percentage * 100),
+      strokeLength,
+      strokeOffset,
+      color: returnColors[ret.condition_on_return.toLowerCase()] || '#F59E0B'
+    };
+  });
+
+  // 3. SaaS / Cloud Financial Spend Calculations
+  const saasBreakdown = data.saasBreakdown || [];
+  const totalSaasCost = saasBreakdown.reduce((sum, s) => sum + parseFloat(s.total_cost || 0), 0);
+  const totalSaasLicenses = saasBreakdown.reduce((sum, s) => sum + s.count, 0);
+  const saasColors = ['#0EA5E9', '#A855F7', '#EC4899', '#10B981'];
+  
+  let saasAccumulator = 0;
+  const saasSegments = saasBreakdown.map((s, idx) => {
+    const percentage = totalSaasCost > 0 ? (parseFloat(s.total_cost) / totalSaasCost) : 0;
+    const strokeLength = percentage * 251.2;
+    const strokeOffset = 251.2 - strokeLength + saasAccumulator;
+    saasAccumulator -= strokeLength;
+    return {
+      ...s,
+      percentage: Math.round(percentage * 100),
+      strokeLength,
+      strokeOffset,
+      color: saasColors[idx % saasColors.length]
+    };
+  });
+
+  // 4. Damage Severity Calculations
+  const damageSeverityBreakdown = data.damageSeverityBreakdown || [];
+  const totalDamages = damageSeverityBreakdown.reduce((sum, d) => sum + d.count, 0);
 
   return (
     <div className="animate-fade-in" style={{ padding: '0 0.5rem' }}>
@@ -564,6 +642,219 @@ export default function Dashboard() {
               <span>Mar 2026</span>
               <span>Apr 2026</span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. Unified Platform Operations Control Room */}
+      <div className="card mb-3 animate-fade-in" style={{ background: 'var(--bg-glass)', border: '1px solid var(--border-primary)', padding: '1.5rem' }}>
+        <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.25rem', color: 'var(--text-primary)' }}>Unified Platform Operations Control Room</h3>
+        <p className="text-xs text-secondary mb-4">Real-time status summaries of requests, returns, physical damage triage, and active SaaS/Cloud spending cycles.</p>
+        
+        <div className="grid-3" style={{ gap: '1.25rem' }}>
+          {/* Card A: Asset Request Tickets */}
+          <div className="card" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-primary)', padding: '1.25rem' }}>
+            <h4 style={{ fontSize: '0.85rem', fontWeight: 700, margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <CheckSquare size={16} style={{ color: 'var(--accent-primary)' }} />
+              Request Status Distributions
+            </h4>
+            
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+              {/* SVG Donut */}
+              <div style={{ position: 'relative', width: '100px', height: '100px', flexShrink: 0 }}>
+                <svg width="100%" height="100%" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
+                  <circle cx="50" cy="50" r="40" fill="transparent" stroke="var(--bg-secondary)" strokeWidth="10" />
+                  {requestSegments.map((req, idx) => (
+                    <circle
+                      key={idx}
+                      className="donut-segment"
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="transparent"
+                      stroke={req.color}
+                      strokeWidth="10"
+                      strokeDasharray="251.2"
+                      strokeDashoffset={req.strokeOffset}
+                      strokeLinecap="round"
+                      style={{ transition: 'stroke-dashoffset 1s ease' }}
+                    />
+                  ))}
+                </svg>
+                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+                  <span style={{ fontSize: '1.1rem', fontWeight: 800 }}>{totalRequests}</span>
+                  <span style={{ fontSize: '0.45rem', display: 'block', color: 'var(--text-tertiary)' }}>REQ TIX</span>
+                </div>
+              </div>
+              
+              {/* Legend List */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: '100px' }}>
+                {requestSegments.length === 0 ? (
+                  <div className="text-xs text-secondary">No tickets submitted.</div>
+                ) : requestSegments.map((req, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.725rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: req.color }} />
+                      <span style={{ fontWeight: 500, textTransform: 'capitalize' }}>{req.status}</span>
+                    </div>
+                    <span style={{ color: 'var(--text-secondary)' }}><strong>{req.count}</strong> <small style={{ fontSize: '0.6rem' }}>({req.percentage}%)</small></span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Card B: Return Condition Audits */}
+          <div className="card" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-primary)', padding: '1.25rem' }}>
+            <h4 style={{ fontSize: '0.85rem', fontWeight: 700, margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <CornerDownLeft size={16} style={{ color: 'var(--status-success)' }} />
+              Asset Return Audits
+            </h4>
+            
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+              {/* SVG Donut */}
+              <div style={{ position: 'relative', width: '100px', height: '100px', flexShrink: 0 }}>
+                <svg width="100%" height="100%" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
+                  <circle cx="50" cy="50" r="40" fill="transparent" stroke="var(--bg-secondary)" strokeWidth="10" />
+                  {returnSegments.map((ret, idx) => (
+                    <circle
+                      key={idx}
+                      className="donut-segment"
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="transparent"
+                      stroke={ret.color}
+                      strokeWidth="10"
+                      strokeDasharray="251.2"
+                      strokeDashoffset={ret.strokeOffset}
+                      strokeLinecap="round"
+                      style={{ transition: 'stroke-dashoffset 1s ease' }}
+                    />
+                  ))}
+                </svg>
+                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+                  <span style={{ fontSize: '1.1rem', fontWeight: 800 }}>{totalReturns}</span>
+                  <span style={{ fontSize: '0.45rem', display: 'block', color: 'var(--text-tertiary)' }}>RETURNS</span>
+                </div>
+              </div>
+              
+              {/* Legend List */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: '100px' }}>
+                {returnSegments.length === 0 ? (
+                  <div className="text-xs text-secondary">No returns registered.</div>
+                ) : returnSegments.map((ret, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.725rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: ret.color }} />
+                      <span style={{ fontWeight: 500, textTransform: 'capitalize' }}>{ret.condition_on_return.replace('_', ' ')}</span>
+                    </div>
+                    <span style={{ color: 'var(--text-secondary)' }}><strong>{ret.count}</strong> <small style={{ fontSize: '0.6rem' }}>({ret.percentage}%)</small></span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Card C: SaaS / Cloud Infrastructure Budget Allocation */}
+          <div className="card" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-primary)', padding: '1.25rem' }}>
+            <h4 style={{ fontSize: '0.85rem', fontWeight: 700, margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <DollarSign size={16} style={{ color: '#EAB308' }} />
+              Finance: SaaS & Cloud Spending
+            </h4>
+            
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+              {/* SVG Donut */}
+              <div style={{ position: 'relative', width: '100px', height: '100px', flexShrink: 0 }}>
+                <svg width="100%" height="100%" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
+                  <circle cx="50" cy="50" r="40" fill="transparent" stroke="var(--bg-secondary)" strokeWidth="10" />
+                  {saasSegments.map((s, idx) => (
+                    <circle
+                      key={idx}
+                      className="donut-segment"
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="transparent"
+                      stroke={s.color}
+                      strokeWidth="10"
+                      strokeDasharray="251.2"
+                      strokeDashoffset={s.strokeOffset}
+                      strokeLinecap="round"
+                      style={{ transition: 'stroke-dashoffset 1s ease' }}
+                    />
+                  ))}
+                </svg>
+                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)', display: 'block', lineHeight: 1 }}>{totalSaasLicenses}</span>
+                  <span style={{ fontSize: '0.45rem', display: 'block', color: 'var(--text-tertiary)', marginTop: '2px' }}>LICENSES</span>
+                </div>
+              </div>
+              
+              {/* Legend List */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: '100px' }}>
+                {saasSegments.length === 0 ? (
+                  <div className="text-xs text-secondary">No software registered.</div>
+                ) : saasSegments.map((s, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.725rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: s.color }} />
+                      <span style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '75px' }}>{s.category}</span>
+                    </div>
+                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.7rem' }}>₹{Math.round(s.total_cost).toLocaleString('en-IN')}</span>
+                      <small style={{ fontSize: '0.55rem', color: 'var(--text-tertiary)' }}>{s.percentage}% cost</small>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Damage Incident Triage Row (Concentric Gauges) */}
+        <div style={{ marginTop: '1.25rem', borderTop: '1px solid var(--border-primary)', paddingTop: '1.25rem' }}>
+          <h4 style={{ fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <AlertOctagon size={14} style={{ color: 'var(--status-danger)' }} />
+            Active Physical Damage Severity Gauges
+          </h4>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            {['critical', 'moderate', 'minor'].map((sev, idx) => {
+              const countObj = damageSeverityBreakdown.find(d => d.severity.toLowerCase() === sev) || { count: 0 };
+              const color = sev === 'critical' ? '#EF4444' : sev === 'moderate' ? '#F59E0B' : '#3b82f6';
+              const maxScale = totalDamages > 0 ? (countObj.count / totalDamages) * 100 : 0;
+              
+              return (
+                <div key={idx} style={{ flex: 1, minWidth: '150px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-primary)', padding: '0.75rem 1.25rem', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ position: 'relative', width: '45px', height: '45px', flexShrink: 0 }}>
+                    <svg width="100%" height="100%" viewBox="0 0 36 36">
+                      <circle cx="18" cy="18" r="16" fill="none" stroke="var(--bg-secondary)" strokeWidth="3" />
+                      <circle 
+                        cx="18" 
+                        cy="18" 
+                        r="16" 
+                        fill="none" 
+                        stroke={color} 
+                        strokeWidth="3.5" 
+                        strokeDasharray="100" 
+                        strokeDashoffset={100 - (maxScale || 0)}
+                        strokeLinecap="round"
+                        style={{ transition: 'stroke-dashoffset 1s ease' }}
+                      />
+                    </svg>
+                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '0.85rem', fontWeight: 800, color }}>
+                      {countObj.count}
+                    </div>
+                  </div>
+                  <div>
+                    <h5 style={{ margin: 0, textTransform: 'capitalize', fontSize: '0.8rem', fontWeight: 700 }}>{sev} Reports</h5>
+                    <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>
+                      {totalDamages > 0 ? Math.round(maxScale) : 0}% of all incident tickets
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
