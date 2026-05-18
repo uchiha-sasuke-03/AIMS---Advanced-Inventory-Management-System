@@ -423,25 +423,25 @@ export default function Finance() {
             </div>
           </div>
 
-          {/* VFD Cloud Audit terminal */}
+          {/* Clean Modern Developer Terminal Console */}
           {(syncing || terminalLogs.length > 0) && (
             <div className="card mb-4" style={{ 
-              background: 'var(--bg-input)', border: '2px solid var(--border-primary)', 
-              borderRadius: '12px', padding: '1rem',
-              boxShadow: 'var(--shadow-inset)',
-              fontFamily: 'Share Tech Mono, Consolas, monospace'
+              background: '#0f172a', border: '1px solid #1e293b', 
+              borderRadius: '8px', padding: '1rem',
+              boxShadow: 'var(--shadow-md)',
+              fontFamily: 'Consolas, SFMono-Regular, monospace'
             }}>
-              <div className="flex items-center gap-2 mb-2" style={{ borderBottom: '1px solid var(--border-primary)', paddingBottom: '0.5rem', marginBottom: '0.75rem', display: 'flex' }}>
-                <Terminal size={14} className="text-accent animate-pulse" />
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-accent)' }}>OKTA & CLOUD AUDIT DIAGNOSTIC HUD TERMINAL</span>
+              <div className="flex items-center gap-2 mb-2" style={{ borderBottom: '1px solid #1e293b', paddingBottom: '0.5rem', marginBottom: '0.75rem', display: 'flex' }}>
+                <Terminal size={14} style={{ color: '#38bdf8' }} />
+                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#f8fafc' }}>Cloud Directory Audit Logs</span>
               </div>
               <div style={{ maxHeight: '150px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                 {terminalLogs.map((log, index) => (
                   <div 
                     key={index} 
                     style={{ 
-                      fontSize: '0.8rem', 
-                      color: log.startsWith('🎉') || log.startsWith('✅') ? 'var(--status-success)' : log.startsWith('❌') ? 'var(--status-danger)' : log.startsWith('⚠️') ? 'var(--status-warning)' : 'var(--text-secondary)' 
+                      fontSize: '0.775rem', 
+                      color: log.startsWith('🎉') || log.startsWith('✅') ? '#34d399' : log.startsWith('❌') ? '#f87171' : log.startsWith('⚠️') ? '#fbbf24' : '#94a3b8' 
                     }}
                   >
                     &gt;&gt; {log}

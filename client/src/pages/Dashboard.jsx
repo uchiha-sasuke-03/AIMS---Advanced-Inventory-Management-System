@@ -185,13 +185,13 @@ export default function Dashboard() {
               const barHeight = (proj.spend / maxSpend) * 100;
               return (
                 <div key={proj.quarter} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, position: 'relative' }}>
-                  <span className="text-xs" style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem', fontFamily: 'Share Tech Mono' }}>
+                  <span className="text-xs" style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem', fontFamily: 'inherit' }}>
                     {formatINR(proj.spend)}
                   </span>
                   <div style={{ 
                     height: '80px', width: '100%', background: 'var(--bg-input)', 
                     borderRadius: '4px', display: 'flex', alignItems: 'flex-end',
-                    boxShadow: 'var(--shadow-inset)', border: '1px solid var(--border-primary)',
+                    boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-primary)',
                     overflow: 'hidden'
                   }}>
                     <div className="grow-bar" style={{ 
